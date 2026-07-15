@@ -1,0 +1,12 @@
+{
+  "name": "Driftline",
+  "short_name": "Driftline",
+  "description": "A polished one-touch dune momentum arcade game.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#f4b25f",
+  "theme_color": "#f4b25f",
+  "icons": []
+}
