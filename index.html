@@ -3,14 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#0d8895" />
+  <meta name="theme-color" content="#000000" />
   <meta name="description" content="Driftline — a one-touch momentum arcade game." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
   <link rel="preload" href="assets/background.svg" as="image" />
   <link rel="preload" href="assets/ball.svg" as="image" />
   <link rel="preload" href="assets/coin.svg" as="image" />
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=13.1" />
+  <link rel="stylesheet" href="intro-stability.css?v=13.1" />
   <title>Driftline</title>
 </head>
 <body>
@@ -19,6 +20,7 @@
     <div id="worldFade" class="world-fade" aria-hidden="true"></div>
 
     <section id="splashIntro" class="splash-intro" aria-label="Driftline intro" aria-hidden="true">
+      <canvas id="introCanvas" class="intro-canvas" aria-hidden="true"></canvas>
       <div class="intro-vignette"></div>
       <div id="splashLogo" class="splash-logo">
         <span class="logo-mark"><i></i></span>
@@ -29,24 +31,12 @@
     </section>
 
     <header id="hud" class="hud" aria-hidden="true">
-      <div class="hud-pill score-pill">
-        <span>SCORE</span>
-        <strong id="scoreValue">0</strong>
-        <small id="distanceValue">0 m</small>
-      </div>
+      <div class="hud-pill score-pill"><span>SCORE</span><strong id="scoreValue">0</strong><small id="distanceValue">0 m</small></div>
       <div class="hud-center">
         <div id="landingToast" class="landing-toast" aria-live="polite"></div>
-        <div class="risk-hud">
-          <span>RISK</span><strong id="pendingScore">—</strong>
-          <i id="multiplierValue">×1.0</i>
-          <small id="speedLabel">CRUISE</small>
-          <b id="altitudeLabel">GROUND</b>
-        </div>
+        <div class="risk-hud"><span>RISK</span><strong id="pendingScore">—</strong><i id="multiplierValue">×1.0</i><small id="speedLabel">CRUISE</small><b id="altitudeLabel">GROUND</b></div>
       </div>
-      <div class="hud-pill coin-pill">
-        <span>COINS</span>
-        <strong><i class="coin-dot"></i><b id="runCoins">0</b></strong>
-      </div>
+      <div class="hud-pill coin-pill"><span>COINS</span><strong><i class="coin-dot"></i><b id="runCoins">0</b></strong></div>
     </header>
 
     <button id="pauseButton" class="pause-button" type="button" aria-label="Pause game" aria-hidden="true"><span></span><span></span></button>
@@ -61,12 +51,7 @@
             <button class="icon-button" type="button" data-open-view="settings" aria-label="Settings">⚙</button>
             <div class="wallet-pill"><img src="assets/coin.svg" alt="" /><strong id="walletCoins">0</strong></div>
           </header>
-
-          <div class="menu-title">
-            <p>ONE-TOUCH MOMENTUM</p>
-            <h1>DRIFT<span>LINE</span></h1>
-          </div>
-
+          <div class="menu-title"><p>ONE-TOUCH MOMENTUM</p><h1>DRIFT<span>LINE</span></h1></div>
           <div class="play-dock">
             <div class="record-strip">
               <div><span>BEST SCORE</span><strong id="bestScore">0</strong></div>
@@ -76,7 +61,6 @@
             <div class="goal-card"><span>CURRENT GOAL</span><strong id="currentGoal">Cross the score line and land smoothly</strong></div>
             <button id="playButton" class="play-button" type="button"><span>PLAY</span><small>Hold to dive · Release to float</small></button>
           </div>
-
           <nav class="bottom-nav" aria-label="Main navigation">
             <button type="button" data-nav-view="garage"><span>◉</span><b>GARAGE</b></button>
             <button type="button" data-nav-view="worlds"><span>◒</span><b>WORLDS</b></button>
@@ -88,11 +72,7 @@
 
       <section class="menu-view" data-view="garage" aria-label="Garage" aria-hidden="true">
         <div class="menu-panel wide-panel">
-          <header class="panel-header">
-            <button class="back-button" type="button" data-open-view="main">‹</button>
-            <div><p>COLLECTION</p><h2>GARAGE</h2></div>
-            <div class="wallet-pill"><img src="assets/coin.svg" alt="" /><strong id="garageWalletCoins">0</strong></div>
-          </header>
+          <header class="panel-header"><button class="back-button" type="button" data-open-view="main">‹</button><div><p>COLLECTION</p><h2>GARAGE</h2></div><div class="wallet-pill"><img src="assets/coin.svg" alt="" /><strong id="garageWalletCoins">0</strong></div></header>
           <p class="panel-copy">Every ball uses identical physics. Legendary designs change glow, trail, and presentation only.</p>
           <div id="garageGrid" class="garage-grid"></div>
         </div>
@@ -163,38 +143,29 @@
       <div class="result-card">
         <p>RUN COMPLETE</p><h2 id="gameOverTitle">Rolled backward</h2><small id="gameOverReason">The ball lost forward momentum.</small>
         <div class="final-score"><span>SCORE</span><strong id="finalScore">0</strong></div>
-        <div class="result-stats">
-          <div><span>DISTANCE</span><strong id="finalDistance">0 m</strong></div>
-          <div><span>BEST SCORE</span><strong id="finalBest">0</strong></div>
-          <div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div>
-        </div>
+        <div class="result-stats"><div><span>DISTANCE</span><strong id="finalDistance">0 m</strong></div><div><span>BEST SCORE</span><strong id="finalBest">0</strong></div><div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div></div>
         <button id="retryButton" class="play-button compact" type="button"><span>RETRY</span><small>Instant restart</small></button>
         <div class="result-actions"><button id="resultGarageButton" type="button">GARAGE</button><button id="menuButton" type="button">MAIN MENU</button></div>
       </div>
     </section>
 
     <section id="pauseOverlay" class="pause-overlay" aria-label="Paused" aria-hidden="true">
-      <div class="pause-card">
-        <p>GAME PAUSED</p><h2>HOLD THE LINE</h2>
-        <button id="resumeButton" class="play-button compact" type="button"><span>RESUME</span></button>
-        <button id="restartButton" class="pause-action" type="button">Restart Run</button>
-        <button id="pauseSettingsButton" class="pause-action" type="button">Settings</button>
-        <button id="pauseMenuButton" class="pause-action quiet" type="button">Main Menu</button>
-      </div>
+      <div class="pause-card"><p>GAME PAUSED</p><h2>HOLD THE LINE</h2><button id="resumeButton" class="play-button compact" type="button"><span>RESUME</span></button><button id="restartButton" class="pause-action" type="button">Restart Run</button><button id="pauseSettingsButton" class="pause-action" type="button">Settings</button><button id="pauseMenuButton" class="pause-action quiet" type="button">Main Menu</button></div>
     </section>
 
     <div id="toastMessage" class="system-toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script defer src="src/physics-core.js?v=13"></script>
-  <script defer src="src/coin-route.js?v=13"></script>
-  <script defer src="src/sand-effects.js?v=13"></script>
-  <script defer src="src/smart-coins.js?v=13"></script>
-  <script defer src="src/score-system.js?v=13"></script>
-  <script defer src="src/autopilot.js?v=13"></script>
-  <script defer src="src/game-ui.js?v=13"></script>
-  <script defer src="src/sand-renderer.js?v=13"></script>
-  <script defer src="src/sand-main.js?v=13"></script>
-  <script defer src="src/sw-register.js?v=13"></script>
+  <script defer src="src/physics-core.js?v=13.1"></script>
+  <script defer src="src/coin-route.js?v=13.1"></script>
+  <script defer src="src/sand-effects.js?v=13.1"></script>
+  <script defer src="src/smart-coins.js?v=13.1"></script>
+  <script defer src="src/score-system.js?v=13.1"></script>
+  <script defer src="src/autopilot.js?v=13.1"></script>
+  <script defer src="src/game-ui.js?v=13.1"></script>
+  <script defer src="src/sand-renderer.js?v=13.1"></script>
+  <script defer src="src/intro-cinematic.js?v=13.1"></script>
+  <script defer src="src/stable-main.js?v=13.1"></script>
+  <script defer src="src/sw-register.js?v=13.1"></script>
 </body>
 </html>
