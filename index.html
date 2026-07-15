@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#91d9ff" />
+  <meta name="description" content="A polished one-touch momentum arcade game built for mobile." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Driftline</title>
+</head>
+<body>
+  <main id="app" aria-label="Driftline arcade game">
+    <canvas id="game" aria-label="Driftline game canvas"></canvas>
+
+    <header id="hud" class="hud" aria-hidden="true">
+      <div class="hud-block">
+        <span>DISTANCE</span>
+        <strong id="scoreValue">0 m</strong>
+      </div>
+      <div id="landingToast" class="landing-toast" aria-live="polite"></div>
+      <div class="hud-block align-right">
+        <span>COINS</span>
+        <strong><i class="coin-dot"></i><b id="runCoins">0</b></strong>
+      </div>
+    </header>
+
+    <section id="startScreen" class="screen active" aria-label="Start menu">
+      <div class="menu-card">
+        <p class="eyebrow">ONE-TOUCH ARCADE</p>
+        <h1>DRIFTLINE</h1>
+        <p class="tagline">Dive into valleys. Release over crests. Keep your momentum alive.</p>
+
+        <div class="menu-stats">
+          <div><span>BEST</span><strong id="bestScore">0 m</strong></div>
+          <div><span>TOTAL COINS</span><strong><i class="coin-dot"></i><b id="totalCoins">0</b></strong></div>
+        </div>
+
+        <button id="playButton" class="primary-button" type="button">
+          <span>Tap to Play</span>
+          <small>Hold to dive · Release to launch</small>
+        </button>
+      </div>
+      <p class="footer-hint">Best played with sound on</p>
+    </section>
+
+    <section id="gameOverScreen" class="screen" aria-label="Game over menu" aria-hidden="true">
+      <div class="menu-card compact">
+        <p class="eyebrow">RUN OVER</p>
+        <h2 id="gameOverTitle">Hard landing</h2>
+        <p id="gameOverReason" class="tagline">Match the slope to keep moving.</p>
+
+        <div class="menu-stats three">
+          <div><span>DISTANCE</span><strong id="finalScore">0 m</strong></div>
+          <div><span>BEST</span><strong id="finalBest">0 m</strong></div>
+          <div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div>
+        </div>
+
+        <button id="retryButton" class="primary-button" type="button">
+          <span>Retry</span>
+          <small>Instant restart</small>
+        </button>
+        <button id="menuButton" class="secondary-button" type="button">Main Menu</button>
+      </div>
+    </section>
+
+    <button id="pauseButton" class="pause-button" type="button" aria-label="Pause game" aria-hidden="true">Ⅱ</button>
+    <div id="pauseOverlay" class="pause-overlay" aria-hidden="true">
+      <div class="pause-card">
+        <p class="eyebrow">PAUSED</p>
+        <button id="resumeButton" class="primary-button small" type="button">Resume</button>
+      </div>
+    </div>
+  </main>
+
+  <script defer src="src/main.js"></script>
+</body>
+</html>
