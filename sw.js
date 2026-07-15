@@ -1,9 +1,10 @@
-const CACHE_NAME = 'driftline-balanced-v9';
+const CACHE_NAME = 'driftline-flow-v10';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css?v=9',
   './src/physics-core.js?v=9',
+  './src/physics-core.js?v=10',
   './src/balanced-game.js?v=9',
   './src/sw-register.js?v=9',
   './manifest.webmanifest',
