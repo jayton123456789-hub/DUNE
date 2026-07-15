@@ -1,12 +1,16 @@
-const CACHE_NAME = 'driftline-flow-v10';
+const CACHE_NAME = 'driftline-sand-routes-v11';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=9',
-  './src/physics-core.js?v=9',
-  './src/physics-core.js?v=10',
-  './src/balanced-game.js?v=9',
-  './src/sw-register.js?v=9',
+  './styles.css?v=11',
+  './src/physics-core.js?v=11',
+  './src/coin-route.js?v=11',
+  './src/sand-effects.js?v=11',
+  './src/smart-coins.js?v=11',
+  './src/game-ui.js?v=11',
+  './src/sand-renderer.js?v=11',
+  './src/sand-main.js?v=11',
+  './src/sw-register.js?v=11',
   './manifest.webmanifest',
   './assets/icon.svg',
   './assets/ball.svg',
