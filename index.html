@@ -10,7 +10,7 @@
   <link rel="preload" href="assets/background.svg" as="image" />
   <link rel="preload" href="assets/ball.svg" as="image" />
   <link rel="preload" href="assets/coin.svg" as="image" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
   <title>Driftline</title>
 </head>
 <body>
@@ -18,62 +18,41 @@
     <canvas id="game" aria-label="Driftline game canvas"></canvas>
 
     <header id="hud" class="hud" aria-hidden="true">
-      <div class="hud-pill">
-        <span>DISTANCE</span>
-        <strong id="scoreValue">0 m</strong>
-      </div>
+      <div class="hud-pill"><span>DISTANCE</span><strong id="scoreValue">0 m</strong></div>
       <div class="hud-center">
         <div id="landingToast" class="landing-toast" aria-live="polite"></div>
-        <div class="stunt-hud">
-          <strong id="multiplierValue">×1.0</strong>
-          <span id="speedLabel">CRUISE</span>
-          <small id="altitudeLabel">GROUND</small>
-        </div>
+        <div class="stunt-hud"><strong id="multiplierValue">×1.0</strong><span id="speedLabel">CRUISE</span><small id="altitudeLabel">GROUND</small></div>
       </div>
-      <div class="hud-pill align-right">
-        <span>COINS</span>
-        <strong><i class="coin-dot"></i><b id="runCoins">0</b></strong>
-      </div>
+      <div class="hud-pill align-right"><span>COINS</span><strong><i class="coin-dot"></i><b id="runCoins">0</b></strong></div>
     </header>
 
-    <button id="pauseButton" class="pause-button" type="button" aria-label="Pause game" aria-hidden="true">
-      <span></span><span></span>
-    </button>
+    <button id="pauseButton" class="pause-button" type="button" aria-label="Pause game" aria-hidden="true"><span></span><span></span></button>
 
     <section id="menuRoot" class="menu-root active" aria-label="Game menus">
       <div class="menu-scrim"></div>
-
       <section id="mainMenu" class="menu-view active" data-view="main" aria-label="Main menu">
         <div class="menu-shell hero-shell">
           <div class="menu-topbar">
             <div class="brand-mini"><span class="brand-orb"></span><b>DRIFTLINE</b></div>
             <div class="wallet-pill"><img src="assets/coin.svg" alt="" /><strong id="walletCoins">0</strong></div>
           </div>
-
           <div class="hero-copy">
             <p class="eyebrow">ONE-TOUCH MOMENTUM</p>
             <h1>RIDE THE<br /><em>PERFECT LINE</em></h1>
             <p>Dive through valleys, launch over crests, and keep your speed alive.</p>
           </div>
-
           <div class="hero-stats">
             <div><span>BEST RUN</span><strong id="bestScore">0 m</strong></div>
             <div><span>SELECTED BALL</span><strong id="selectedSkinName">Aqua</strong></div>
           </div>
-
-          <button id="playButton" class="play-button" type="button">
-            <span>PLAY</span>
-            <small>Hold to dive · Release to launch</small>
-          </button>
-
+          <button id="playButton" class="play-button" type="button"><span>PLAY</span><small>Hold to dive · Release to launch</small></button>
           <nav class="menu-grid" aria-label="Main menu options">
             <button class="menu-tile" type="button" data-open-view="shop"><span class="tile-icon">◉</span><b>SHOP</b><small>Ball skins</small></button>
             <button class="menu-tile" type="button" data-open-view="settings"><span class="tile-icon">⚙</span><b>SETTINGS</b><small>Sound & feel</small></button>
             <button class="menu-tile" type="button" data-open-view="stats"><span class="tile-icon">↗</span><b>STATS</b><small>Your records</small></button>
             <button class="menu-tile" type="button" data-open-view="help"><span class="tile-icon">?</span><b>HOW TO PLAY</b><small>Master momentum</small></button>
           </nav>
-
-          <p class="version-label">DRIFTLINE v1.4 · SAND ROUTES</p>
+          <p class="version-label">DRIFTLINE v1.4 · DRY DUNES</p>
         </div>
       </section>
 
@@ -137,21 +116,16 @@
             <article><span class="guide-number">02</span><div><b>RELEASE TO FLOAT</b><p>Let go on the climb. The ground releases the ball when it can no longer push it.</p></div></article>
             <article><span class="guide-number">03</span><div><b>MATCH THE VECTOR</b><p>Land parallel to the dune. Normal impact force decides whether you survive.</p></div></article>
           </div>
-          <div class="control-demo"><span class="demo-ball"></span><div class="demo-line"></div><p>Coin lines now follow the predicted natural release path from each dune.</p></div>
+          <div class="control-demo"><span class="demo-ball"></span><div class="demo-line"></div><p>The opening valley is tuned to generate a large natural first jump.</p></div>
         </div>
       </section>
     </section>
 
     <section id="gameOverScreen" class="result-screen" aria-label="Game over" aria-hidden="true">
       <div class="result-card">
-        <p class="eyebrow">RUN COMPLETE</p>
-        <h2 id="gameOverTitle">Hard landing</h2>
-        <p id="gameOverReason" class="result-reason">Match the slope before touching down.</p>
+        <p class="eyebrow">RUN COMPLETE</p><h2 id="gameOverTitle">Hard landing</h2><p id="gameOverReason" class="result-reason">Match the slope before touching down.</p>
         <div class="result-score"><span>DISTANCE</span><strong id="finalScore">0 m</strong></div>
-        <div class="result-stats">
-          <div><span>BEST</span><strong id="finalBest">0 m</strong></div>
-          <div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div>
-        </div>
+        <div class="result-stats"><div><span>BEST</span><strong id="finalBest">0 m</strong></div><div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div></div>
         <button id="retryButton" class="play-button compact-play" type="button"><span>RETRY</span><small>Instant restart</small></button>
         <div class="result-actions"><button id="resultShopButton" class="secondary-action" type="button">SHOP</button><button id="menuButton" class="secondary-action" type="button">MAIN MENU</button></div>
       </div>
@@ -159,8 +133,7 @@
 
     <section id="pauseOverlay" class="pause-overlay" aria-label="Paused" aria-hidden="true">
       <div class="pause-card">
-        <p class="eyebrow">GAME PAUSED</p>
-        <h2>TAKE A BREATH</h2>
+        <p class="eyebrow">GAME PAUSED</p><h2>TAKE A BREATH</h2>
         <button id="resumeButton" class="play-button compact-play" type="button"><span>RESUME</span></button>
         <button id="restartButton" class="pause-action" type="button">Restart Run</button>
         <button id="pauseSettingsButton" class="pause-action" type="button">Settings</button>
@@ -171,13 +144,13 @@
     <div id="toastMessage" class="system-toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script defer src="src/physics-core.js?v=11"></script>
-  <script defer src="src/coin-route.js?v=11"></script>
-  <script defer src="src/sand-effects.js?v=11"></script>
-  <script defer src="src/smart-coins.js?v=11"></script>
-  <script defer src="src/game-ui.js?v=11"></script>
-  <script defer src="src/sand-renderer.js?v=11"></script>
-  <script defer src="src/sand-main.js?v=11"></script>
-  <script defer src="src/sw-register.js?v=11"></script>
+  <script defer src="src/physics-core.js?v=12"></script>
+  <script defer src="src/coin-route.js?v=12"></script>
+  <script defer src="src/sand-effects.js?v=12"></script>
+  <script defer src="src/smart-coins.js?v=12"></script>
+  <script defer src="src/game-ui.js?v=12"></script>
+  <script defer src="src/sand-renderer.js?v=12"></script>
+  <script defer src="src/sand-main.js?v=12"></script>
+  <script defer src="src/sw-register.js?v=12"></script>
 </body>
 </html>
