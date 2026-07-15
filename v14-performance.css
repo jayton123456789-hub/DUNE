@@ -1,0 +1,17 @@
+#game{contain:strict;transform:translateZ(0);backface-visibility:hidden}
+.menu-root,.result-screen,.pause-overlay,.splash-intro{contain:layout paint style}
+
+@media (hover:none) and (pointer:coarse){
+  .player-chip,.wallet-pill,.icon-button,.play-dock,.bottom-nav,.menu-panel,
+  .hud-pill,.risk-hud,.pause-button,.result-card,.pause-card{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  .player-chip,.wallet-pill,.icon-button,.play-dock,.bottom-nav{background:rgba(7,29,39,.9)}
+  .menu-panel,.result-card,.pause-card{background:rgba(7,27,37,.98)}
+  .hud-pill,.risk-hud,.pause-button{background:rgba(7,29,39,.88)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .menu-view.active{animation:none!important}
+}
