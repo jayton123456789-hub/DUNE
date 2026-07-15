@@ -10,7 +10,7 @@
   <link rel="preload" href="assets/background.svg" as="image" />
   <link rel="preload" href="assets/ball.svg" as="image" />
   <link rel="preload" href="assets/coin.svg" as="image" />
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <title>Driftline</title>
 </head>
 <body>
@@ -22,7 +22,14 @@
         <span>DISTANCE</span>
         <strong id="scoreValue">0 m</strong>
       </div>
-      <div id="landingToast" class="landing-toast" aria-live="polite"></div>
+      <div class="hud-center">
+        <div id="landingToast" class="landing-toast" aria-live="polite"></div>
+        <div class="stunt-hud">
+          <strong id="multiplierValue">×1.0</strong>
+          <span id="speedLabel">CRUISE</span>
+          <small id="altitudeLabel">GROUND</small>
+        </div>
+      </div>
       <div class="hud-pill align-right">
         <span>COINS</span>
         <strong><i class="coin-dot"></i><b id="runCoins">0</b></strong>
@@ -66,7 +73,7 @@
             <button class="menu-tile" type="button" data-open-view="help"><span class="tile-icon">?</span><b>HOW TO PLAY</b><small>Master momentum</small></button>
           </nav>
 
-          <p class="version-label">DRIFTLINE v1.1</p>
+          <p class="version-label">DRIFTLINE v1.3 · NEWTON PHYSICS</p>
         </div>
       </section>
 
@@ -89,27 +96,12 @@
             <div><p class="eyebrow">PREFERENCES</p><h2>SETTINGS</h2></div>
             <div class="header-spacer"></div>
           </header>
-
           <div class="settings-list">
-            <button class="setting-row" type="button" data-setting="sound">
-              <span><b>Sound</b><small>Music-free arcade effects</small></span>
-              <i id="soundToggle" class="toggle"></i>
-            </button>
-            <button class="setting-row" type="button" data-setting="vibration">
-              <span><b>Haptics</b><small>Vibration on coins and impacts</small></span>
-              <i id="vibrationToggle" class="toggle"></i>
-            </button>
-            <button class="setting-row" type="button" data-setting="motion">
-              <span><b>Effects</b><small>Particles, trails, and camera shake</small></span>
-              <i id="motionToggle" class="toggle"></i>
-            </button>
+            <button class="setting-row" type="button" data-setting="sound"><span><b>Sound</b><small>Music-free arcade effects</small></span><i id="soundToggle" class="toggle"></i></button>
+            <button class="setting-row" type="button" data-setting="vibration"><span><b>Haptics</b><small>Vibration on coins and impacts</small></span><i id="vibrationToggle" class="toggle"></i></button>
+            <button class="setting-row" type="button" data-setting="motion"><span><b>Effects</b><small>Particles, trails, and camera shake</small></span><i id="motionToggle" class="toggle"></i></button>
           </div>
-
-          <div class="settings-note">
-            <b>iPhone tip</b>
-            <p>Add Driftline to your Home Screen for the cleanest full-screen experience.</p>
-          </div>
-
+          <div class="settings-note"><b>iPhone tip</b><p>Add Driftline to your Home Screen for the cleanest full-screen experience.</p></div>
           <button id="resetDataButton" class="danger-button" type="button">Reset Save Data</button>
         </div>
       </section>
@@ -141,11 +133,11 @@
             <div class="header-spacer"></div>
           </header>
           <div class="guide-grid">
-            <article><span class="guide-number">01</span><div><b>HOLD TO DIVE</b><p>Press through downhill sections to gain more speed.</p></div></article>
-            <article><span class="guide-number">02</span><div><b>RELEASE TO LAUNCH</b><p>Let go before a crest to convert speed into airtime.</p></div></article>
-            <article><span class="guide-number">03</span><div><b>MATCH THE SLOPE</b><p>Land parallel to the dune. Bad angles end the run.</p></div></article>
+            <article><span class="guide-number">01</span><div><b>HOLD TO DIVE</b><p>Press through downhill sections to increase gravity and build speed.</p></div></article>
+            <article><span class="guide-number">02</span><div><b>RELEASE TO FLOAT</b><p>Let go on the climb. The ground releases the ball when it can no longer push it.</p></div></article>
+            <article><span class="guide-number">03</span><div><b>MATCH THE VECTOR</b><p>Land parallel to the dune. Normal impact force decides whether you survive.</p></div></article>
           </div>
-          <div class="control-demo"><span class="demo-ball"></span><div class="demo-line"></div><p>Build speed first. The opening valley gives you a guaranteed launch.</p></div>
+          <div class="control-demo"><span class="demo-ball"></span><div class="demo-line"></div><p>The opening valley is tuned to generate a large natural first jump.</p></div>
         </div>
       </section>
     </section>
@@ -161,10 +153,7 @@
           <div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div>
         </div>
         <button id="retryButton" class="play-button compact-play" type="button"><span>RETRY</span><small>Instant restart</small></button>
-        <div class="result-actions">
-          <button id="resultShopButton" class="secondary-action" type="button">SHOP</button>
-          <button id="menuButton" class="secondary-action" type="button">MAIN MENU</button>
-        </div>
+        <div class="result-actions"><button id="resultShopButton" class="secondary-action" type="button">SHOP</button><button id="menuButton" class="secondary-action" type="button">MAIN MENU</button></div>
       </div>
     </section>
 
@@ -182,7 +171,8 @@
     <div id="toastMessage" class="system-toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script defer src="src/game.js?v=6"></script>
-  <script defer src="src/sw-register.js?v=6"></script>
+  <script defer src="src/physics-core.js?v=8"></script>
+  <script defer src="src/newton-game.js?v=8"></script>
+  <script defer src="src/sw-register.js?v=8"></script>
 </body>
 </html>
