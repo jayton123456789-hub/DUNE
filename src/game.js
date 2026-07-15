@@ -17,6 +17,8 @@
     score: $('scoreValue'),
     runCoins: $('runCoins'),
     landingToast: $('landingToast'),
+    multiplier: $('multiplierValue'),
+    speedLabel: $('speedLabel'),
     pauseButton: $('pauseButton'),
     menuRoot: $('menuRoot'),
     mainMenu: $('mainMenu'),
@@ -115,6 +117,7 @@
   let H = 1;
   let DPR = 1;
   let G = null;
+  let terrainField = null;
   function resize() {
     W = Math.max(280, Math.round(window.innerWidth));
     H = Math.max(320, Math.round(window.innerHeight));
@@ -124,6 +127,7 @@
     canvas.style.width = `${W}px`;
     canvas.style.height = `${H}px`;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (terrainField) terrainField.reset();
     if (G?.player?.onGround) G.player.y = ground(G.player.x) - G.player.radius;
   }
   addEventListener('resize', resize, { passive: true });
@@ -182,70 +186,103 @@
     if (save.settings.vibration && navigator.vibrate) navigator.vibrate(pattern);
   }
 
-  function endlessGround(px) {
-    const difficulty = clamp((px - 1400) / 18000, 0, 1);
-    const base = H * 0.69;
-    const broad = Math.sin(px / 350) * (Math.min(74, H * 0.13) + 22 * difficulty);
-    const medium = Math.sin(px / 165 + 1.2) * (Math.min(28, H * 0.055) + 13 * difficulty);
-    const detail = Math.sin(px / 79 + 0.35) * (4 + 4 * difficulty);
-    return base + broad + medium + detail;
+  class TerrainField {
+    constructor() {
+      this.points = [];
+      this.seed = 0x5f3759df;
+      this.reset();
+    }
+    random() {
+      this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
+      return this.seed / 4294967296;
+    }
+    reset() {
+      this.seed = 0x5f3759df;
+      const high = H * 0.30;
+      const low = H * 0.86;
+      this.points = [
+        { x: -300, y: high },
+        { x: 140, y: high },
+        { x: 560, y: low },
+        { x: 980, y: H * 0.36 },
+        { x: 1280, y: H * 0.68 },
+        { x: 1560, y: H * 0.50 }
+      ];
+      this.generateTo(6000);
+    }
+    generateTo(targetX) {
+      while (this.points[this.points.length - 1].x < targetX) {
+        const last = this.points[this.points.length - 1];
+        const previous = this.points[this.points.length - 2];
+        const isValley = last.y > previous.y;
+        const difficulty = clamp((last.x - 1500) / 22000, 0, 1);
+        let width = lerp(220, 390, this.random());
+        if (this.random() < 0.16) width += 150 + this.random() * 130;
+        if (this.random() < 0.18) width -= 45;
+        width = clamp(width, 185, 590);
+        const high = H * lerp(0.43, 0.31, difficulty) + this.random() * H * 0.08;
+        const low = H * lerp(0.77, 0.88, difficulty) - this.random() * H * 0.05;
+        let y = isValley ? high : low;
+        if (this.random() < 0.15) y = lerp(y, H * 0.62, 0.45);
+        this.points.push({ x: last.x + width, y });
+      }
+    }
+    segment(px) {
+      this.generateTo(px + 2400);
+      let lo = 0, hi = this.points.length - 2;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (px < this.points[mid].x) hi = mid - 1;
+        else if (px > this.points[mid + 1].x) lo = mid + 1;
+        else return mid;
+      }
+      return clamp(lo, 0, this.points.length - 2);
+    }
+    height(px) {
+      const i = this.segment(px);
+      const a = this.points[i], b = this.points[i + 1];
+      const t = clamp((px - a.x) / (b.x - a.x), 0, 1);
+      const eased = t * t * (3 - 2 * t);
+      return lerp(a.y, b.y, eased);
+    }
+    slope(px) {
+      const i = this.segment(px);
+      const a = this.points[i], b = this.points[i + 1];
+      const width = b.x - a.x;
+      const t = clamp((px - a.x) / width, 0, 1);
+      return (b.y - a.y) * (6 * t * (1 - t)) / width;
+    }
   }
 
-  function ground(px) {
-    const top = H * 0.34;
-    const valley = H * 0.83;
-    const launch = H * 0.42;
-    const settle = H * 0.64;
-
-    if (px <= 140) return top;
-    if (px < 520) return lerp(top, valley, smooth((px - 140) / 380));
-    if (px < 910) return lerp(valley, launch, smooth((px - 520) / 390));
-    if (px < 1190) return lerp(launch, settle, smooth((px - 910) / 280));
-    if (px < 1620) return lerp(settle, endlessGround(px), smooth((px - 1190) / 430));
-    return endlessGround(px);
-  }
-
-  function slope(px) {
-    const epsilon = 1.6;
-    return (ground(px + epsilon) - ground(px - epsilon)) / (epsilon * 2);
-  }
+  terrainField = new TerrainField();
+  const ground = px => terrainField.height(px);
+  const slope = px => terrainField.slope(px);
 
   class CoinField {
-    constructor() { this.items = []; this.next = 1320; }
+    constructor() { this.items = []; this.next = 700; }
     reset() {
       this.items = [];
-      const firstStart = 735;
-      const firstCount = 8;
-      for (let i = 0; i < firstCount; i++) {
-        const t = i / (firstCount - 1);
-        const px = firstStart + i * 52;
-        this.items.push({
-          x: px,
-          y: ground(px) - 62 - Math.sin(Math.PI * t) * Math.min(120, H * 0.18),
-          taken: false,
-          phase: i * 0.45
-        });
-      }
-      this.next = 1320;
-      this.ensure(2700);
+      this.next = 690;
+      this.ensure(3200);
     }
     ensure(target) {
       while (this.next < target) {
         const start = this.next;
-        const count = 6 + Math.floor((start / 900) % 4);
-        const spacing = 42;
-        const arcHeight = 72 + 30 * Math.sin(start / 430);
+        const localSlope = slope(start);
+        const count = 6 + Math.floor((start / 1000) % 4);
+        const spacing = 46;
+        const arcHeight = 84 + Math.min(120, Math.abs(localSlope) * 150) + 24 * Math.sin(start / 510);
         for (let i = 0; i < count; i++) {
-          const t = i / (count - 1);
+          const t = i / Math.max(1, count - 1);
           const px = start + i * spacing;
           this.items.push({
             x: px,
-            y: ground(px) - 48 - Math.sin(Math.PI * t) * arcHeight,
+            y: ground(px) - 56 - Math.sin(Math.PI * t) * arcHeight,
             taken: false,
-            phase: Math.random() * TAU
+            phase: (i * 0.73 + start * 0.001) % TAU
           });
         }
-        this.next += count * spacing + 290 + (Math.sin(start * 0.01) + 1) * 80;
+        this.next += count * spacing + 260 + ((Math.sin(start * 0.007) + 1) * 85);
       }
     }
   }
@@ -302,10 +339,19 @@
     held: false,
     score: 0,
     runCoins: 0,
-    camera: 0,
+    cameraX: 0,
+    cameraY: H * 0.62,
+    zoom: 1,
     shake: 0,
     toastTimer: 0,
     stallTimer: 0,
+    multiplier: 1,
+    combo: 0,
+    bonusScore: 0,
+    speedBonus: 0,
+    highestAltitude: 0,
+    jumpStartY: 0,
+    quipTier: 0,
     lastFrame: performance.now(),
     accumulator: 0,
     step: 1 / 120,
@@ -414,7 +460,7 @@
     const p = G.player;
     p.x = START_X;
     p.y = ground(p.x) - p.radius;
-    p.vx = 310;
+    p.vx = 360;
     p.vy = slope(p.x) * p.vx;
     p.onGround = true;
     p.rotation = 0;
@@ -422,10 +468,19 @@
     Object.assign(G, {
       score: 0,
       runCoins: 0,
-      camera: 0,
+      cameraX: 0,
+      cameraY: H * 0.62,
+      zoom: 1,
       shake: 0,
       toastTimer: 0,
       stallTimer: 0,
+      multiplier: 1,
+      combo: 0,
+      bonusScore: 0,
+      speedBonus: 0,
+      highestAltitude: 0,
+      jumpStartY: p.y,
+      quipTier: 0,
       held: false,
       accumulator: 0
     });
@@ -434,6 +489,8 @@
     U.score.textContent = '0 m';
     U.runCoins.textContent = '0';
     U.landingToast.classList.remove('show');
+    U.multiplier.textContent = '×1.0';
+    U.speedLabel.textContent = 'CRUISE';
   }
 
   function startRun() {
@@ -475,11 +532,29 @@
     }, 170);
   }
 
-  function showLanding(text, color = '#fff') {
+  function showLanding(text, color = '#fff', duration = 0.8) {
     U.landingToast.textContent = text;
     U.landingToast.style.color = color;
     U.landingToast.classList.add('show');
-    G.toastTimer = 0.65;
+    G.toastTimer = duration;
+  }
+
+  function announceAirTier(altitude, speed) {
+    let tier = 0;
+    let text = '';
+    if (altitude > H * 1.5) { tier = 5; text = 'TO THE STARS'; }
+    else if (altitude > H * 0.9) { tier = 4; text = 'ORBITAL'; }
+    else if (altitude > H * 0.55) { tier = 3; text = 'SKY HIGH'; }
+    else if (altitude > H * 0.30) { tier = 2; text = 'BIG AIR'; }
+    else if (altitude > H * 0.16) { tier = 1; text = 'NICE FLIGHT'; }
+    if (speed > 780 && tier < 4) { tier = Math.max(tier, 3); text = 'HYPERSPEED'; }
+    if (tier > G.quipTier) {
+      G.quipTier = tier;
+      showLanding(text, tier >= 4 ? '#d8e8ff' : '#fff5a8', 1.05);
+      G.multiplier = clamp(G.multiplier + tier * 0.18, 1, 8);
+      U.multiplier.textContent = `×${G.multiplier.toFixed(1)}`;
+      audio.launch();
+    }
   }
 
   function pauseGame() {
@@ -530,208 +605,262 @@
     while (difference > Math.PI) difference -= TAU;
     difference = Math.abs(difference);
 
-    if (impact > 470 || difference > 0.86) {
-      endRun('Hard landing', 'Match the direction of the dune before touching down.');
+    const altitudeTier = clamp(G.highestAltitude / Math.max(1, H * 0.25), 0, 5);
+    const airTier = clamp(p.airTime / 1.2, 0, 4);
+    if (impact > 640 || difference > 1.02) {
+      endRun('Hard landing', 'Line up with the dune before impact.');
       return false;
     }
-    if (difference < 0.2 && impact < 285) {
-      p.vx = Math.max(260, tangentSpeed * (1.09 + clamp(p.airTime / 3.5, 0, 0.07)));
+
+    if (difference < 0.23 && impact < 360) {
+      G.combo += 1;
+      G.multiplier = clamp(G.multiplier + 0.35 + airTier * 0.16 + altitudeTier * 0.12, 1, 8);
+      const boost = 1.07 + clamp(p.airTime * 0.025, 0, 0.13) + clamp(G.highestAltitude / 3000, 0, 0.08);
+      p.vx = Math.max(320, tangentSpeed * boost + 22 * G.combo);
+      G.speedBonus += Math.round((p.airTime * 18 + G.highestAltitude * 0.025) * G.multiplier);
       save.perfects += 1;
       persist();
-      showLanding('PERFECT', '#fff5a8');
-      particles.burst(p.x, p.y + p.radius, '#fff', 12, 100);
+      showLanding(G.combo > 2 ? `PERFECT ×${G.combo}` : 'PERFECT', '#fff5a8', 0.9);
+      particles.burst(p.x, p.y + p.radius, '#fff', 16, 125);
       audio.perfect();
-      haptic([10, 25, 10]);
-    } else {
-      p.vx = Math.max(225, tangentSpeed * 0.96);
-      showLanding('GOOD');
+      haptic([10, 22, 10]);
+    } else if (difference < 0.55 && impact < 500) {
+      G.combo = Math.max(0, G.combo - 1);
+      G.multiplier = Math.max(1, G.multiplier * 0.88);
+      p.vx = Math.max(270, tangentSpeed * 0.98);
+      showLanding('SMOOTH', '#ffffff', 0.65);
       audio.good();
       haptic(10);
+    } else {
+      G.combo = 0;
+      G.multiplier = 1;
+      p.vx = Math.max(230, tangentSpeed * 0.82);
+      showLanding('ROUGH', '#ffd7d7', 0.65);
+      G.shake = save.settings.motion ? 5 : 0;
     }
+    U.multiplier.textContent = `×${G.multiplier.toFixed(1)}`;
     return true;
   }
 
   function update(dt) {
     const p = G.player;
+    const releaseGravity = 390;
+    const diveGravity = 1160;
+
     if (p.onGround) {
       const terrainSlope = slope(p.x);
       const angle = Math.atan2(terrainSlope, 1);
       const tx = Math.cos(angle);
       const ty = Math.sin(angle);
-      let speed = Math.hypot(p.vx, p.vy);
-      speed += (1020 * ty + (G.held ? Math.max(0, ty) * 560 : 0) - (8 + speed * 0.0025)) * dt;
-      if (p.x < 1120) speed = Math.max(speed, 285);
-      speed = clamp(speed, 0, 880);
-
-      const releaseLaunch = !G.held && terrainSlope < -0.1 && speed > 220;
-      const openingCrest = p.x > 820 && p.x < 990 && terrainSlope < -0.035 && slope(p.x + 24) > terrainSlope + 0.065;
-      const naturalCrest = terrainSlope < -0.075 && slope(p.x + 20) > terrainSlope + 0.11;
+      let speed = Math.max(0, p.vx * tx + p.vy * ty);
+      const gravityAlong = 1080 * ty;
+      const diveDrive = G.held ? Math.max(0, ty) * 620 : 0;
+      const rollingDrag = 6 + speed * 0.0018;
+      speed += (gravityAlong + diveDrive - rollingDrag) * dt;
+      if (p.x < 1150) speed = Math.max(speed, 330);
+      speed = clamp(speed, 0, 1220);
 
       p.vx = tx * speed;
       p.vy = ty * speed;
-      p.x += p.vx * dt;
-      p.y = ground(p.x) - p.radius;
-      p.rotation += speed / p.radius * dt;
+      const nextX = p.x + p.vx * dt;
+      const freeY = p.y + p.vy * dt + 0.5 * releaseGravity * dt * dt;
+      const nextSurface = ground(nextX) - p.radius;
+      const separating = freeY < nextSurface - 0.7 && speed > 170;
 
-      if ((releaseLaunch || openingCrest || naturalCrest) && ground(p.x + 10) - p.radius > p.y + p.vy * dt + 1.2) {
+      if (separating) {
         p.onGround = false;
+        p.x = nextX;
+        p.y = freeY;
         p.airTime = 0;
-        p.vy -= openingCrest ? 84 : releaseLaunch ? 48 : 22;
+        G.jumpStartY = ground(p.x);
+        G.highestAltitude = 0;
+        G.quipTier = 0;
+        p.vy -= clamp(speed * 0.045, 12, 62);
         audio.launch();
         haptic(8);
+      } else {
+        p.x = nextX;
+        p.y = nextSurface;
+        p.vx = Math.cos(Math.atan2(slope(p.x), 1)) * speed;
+        p.vy = Math.sin(Math.atan2(slope(p.x), 1)) * speed;
       }
+      p.rotation += speed / p.radius * dt;
 
-      if (p.x > 1200 && terrainSlope < -0.08 && speed < 58) G.stallTimer += dt;
-      else G.stallTimer = Math.max(0, G.stallTimer - dt * 2);
-
-      if (speed <= 1 || p.vx <= 0) {
-        endRun('Momentum lost', 'Carry more speed into the climb.');
-        return;
-      }
-      if (G.stallTimer > 0.24) {
-        endRun('Stalled', 'Dive deeper into the previous valley.');
-        return;
-      }
+      if (p.x > 1400 && terrainSlope < -0.10 && speed < 72) G.stallTimer += dt;
+      else G.stallTimer = Math.max(0, G.stallTimer - dt * 2.4);
+      if (speed <= 2 || p.vx <= 0) { endRun('Momentum lost', 'Dive deeper and carry speed into the climb.'); return; }
+      if (G.stallTimer > 0.34) { endRun('Stalled', 'The previous valley did not give enough speed.'); return; }
     } else {
       p.airTime += dt;
-      p.vy += (G.held ? 1230 : 760) * dt;
+      const gravity = G.held ? diveGravity : releaseGravity;
+      p.vy += gravity * dt;
+      p.vx *= Math.pow(G.held ? 0.9992 : 0.99975, dt * 120);
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.rotation += p.vx / p.radius * dt;
 
+      const altitude = Math.max(0, ground(p.x) - p.radius - p.y);
+      G.highestAltitude = Math.max(G.highestAltitude, altitude);
+      announceAirTier(altitude, Math.hypot(p.vx, p.vy));
+
       const groundY = ground(p.x) - p.radius;
-      if (p.y >= groundY) {
-        const angle = Math.atan2(slope(p.x), 1);
-        const tx = Math.cos(angle);
-        const ty = Math.sin(angle);
+      if (p.y >= groundY && p.vy > slope(p.x) * p.vx - 30) {
+        const terrainAngle = Math.atan2(slope(p.x), 1);
+        const tx = Math.cos(terrainAngle);
+        const ty = Math.sin(terrainAngle);
         const tangentSpeed = Math.max(0, p.vx * tx + p.vy * ty);
         const impact = Math.abs(-p.vx * ty + p.vy * tx);
         p.y = groundY;
         p.onGround = true;
-        if (!evaluateLanding(angle, tangentSpeed, impact)) return;
-        p.vy = slope(p.x) * p.vx;
+        if (!evaluateLanding(terrainAngle, tangentSpeed, impact)) return;
+        const landedAngle = Math.atan2(slope(p.x), 1);
+        const landedSpeed = Math.max(0, p.vx);
+        p.vx = Math.cos(landedAngle) * landedSpeed;
+        p.vy = Math.sin(landedAngle) * landedSpeed;
         p.airTime = 0;
+        G.highestAltitude = 0;
+        G.quipTier = 0;
       }
-
-      if (p.vx <= 0) {
-        endRun('Moving backward', 'Forward momentum is required.');
-        return;
-      }
+      if (p.vx <= 0) { endRun('Moving backward', 'Keep forward momentum at all times.'); return; }
     }
 
     const speedNow = Math.hypot(p.vx, p.vy);
-    if (save.settings.motion && speedNow > 370 && Math.random() < 0.34) {
+    if (speedNow > 850) U.speedLabel.textContent = 'MAX VELOCITY';
+    else if (speedNow > 650) U.speedLabel.textContent = 'BLAZING';
+    else if (speedNow > 480) U.speedLabel.textContent = 'FAST';
+    else if (speedNow > 330) U.speedLabel.textContent = 'CRUISE';
+    else U.speedLabel.textContent = 'BUILD SPEED';
+
+    if (save.settings.motion && speedNow > 390 && Math.random() < Math.min(0.72, speedNow / 1200)) {
       particles.trail(p.x - p.radius * 0.8, p.y, p.vx, p.vy, selectedSkin().trail);
     }
 
     collectCoins();
-    G.score = Math.max(G.score, (p.x - START_X) / 10);
+    G.bonusScore += Math.max(0, speedNow - 360) * dt * 0.004 * G.multiplier;
+    G.score = Math.max(G.score, (p.x - START_X) / 10 + G.bonusScore);
     U.score.textContent = `${Math.floor(G.score)} m`;
-    G.camera = lerp(G.camera, p.x - W * 0.27, 1 - Math.pow(0.001, dt));
+
+    const altitude = Math.max(0, ground(p.x) - p.radius - p.y);
+    const targetZoom = clamp(1 - Math.max(0, speedNow - 360) / 1800 - altitude / Math.max(900, H * 3.2), 0.42, 1);
+    G.zoom = lerp(G.zoom, targetZoom, 1 - Math.pow(0.002, dt));
+    const lookAhead = W * (0.25 + (1 - G.zoom) * 0.11) / G.zoom;
+    G.cameraX = lerp(G.cameraX, p.x - lookAhead, 1 - Math.pow(0.0015, dt));
+    const targetCameraY = lerp(ground(p.x), p.y, clamp(altitude / Math.max(1, H * 0.42), 0.18, 0.84));
+    G.cameraY = lerp(G.cameraY, targetCameraY, 1 - Math.pow(0.004, dt));
 
     if (G.toastTimer > 0 && (G.toastTimer -= dt) <= 0) U.landingToast.classList.remove('show');
     particles.update(dt);
   }
 
   function drawSky() {
-    if (assets.bg.complete && assets.bg.naturalWidth) {
+    const p = G.player;
+    const altitude = Math.max(0, ground(p.x) - p.radius - p.y);
+    const spaceMix = clamp((altitude - H * 0.55) / Math.max(1, H * 0.95), 0, 1);
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, spaceMix > 0 ? `rgb(${Math.round(lerp(0, 5, 1-spaceMix))},${Math.round(lerp(8, 200, 1-spaceMix))},${Math.round(lerp(25, 210, 1-spaceMix))})` : '#00c8d1');
+    gradient.addColorStop(0.62, spaceMix > 0 ? '#12365c' : '#bcefd9');
+    gradient.addColorStop(1, spaceMix > 0 ? '#2b6f80' : '#f7efa3');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+
+    if (assets.bg.complete && assets.bg.naturalWidth && spaceMix < 0.92) {
+      ctx.save();
+      ctx.globalAlpha = 1 - spaceMix;
       const ratio = assets.bg.naturalWidth / assets.bg.naturalHeight;
       const imageHeight = H;
       const imageWidth = imageHeight * ratio;
-      const offset = -((G.camera * 0.08) % imageWidth);
-      for (let px = offset - imageWidth; px < W + imageWidth; px += imageWidth) {
-        ctx.drawImage(assets.bg, px, 0, imageWidth, imageHeight);
-      }
-    } else {
-      const gradient = ctx.createLinearGradient(0, 0, 0, H);
-      gradient.addColorStop(0, '#00c8d1');
-      gradient.addColorStop(0.58, '#bcefd9');
-      gradient.addColorStop(1, '#f7efa3');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, W, H);
+      const offset = -((G.cameraX * 0.08) % imageWidth);
+      for (let px = offset - imageWidth; px < W + imageWidth; px += imageWidth) ctx.drawImage(assets.bg, px, 0, imageWidth, imageHeight);
+      ctx.restore();
     }
-  }
 
-  function drawTerrain(camera) {
-    ctx.beginPath();
-    ctx.moveTo(0, H + 40);
-    for (let sx = -8; sx <= W + 8; sx += 7) ctx.lineTo(sx, ground(camera + sx));
-    ctx.lineTo(W + 8, H + 40);
-    ctx.closePath();
-    const gradient = ctx.createLinearGradient(0, H * 0.42, 0, H);
-    gradient.addColorStop(0, '#58cbb7');
-    gradient.addColorStop(1, '#109798');
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    ctx.beginPath();
-    for (let sx = -8; sx <= W + 8; sx += 7) {
-      const y = ground(camera + sx);
-      if (sx === -8) ctx.moveTo(sx, y); else ctx.lineTo(sx, y);
-    }
-    ctx.strokeStyle = 'rgba(255,255,255,.58)';
-    ctx.lineWidth = 3;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  }
-
-  function drawCoins(camera) {
-    const time = performance.now() * 0.004;
-    for (const coin of coins.items) {
-      if (coin.taken) continue;
-      const screenX = coin.x - camera;
-      if (screenX < -34 || screenX > W + 34) continue;
+    if (spaceMix > 0.02) {
       ctx.save();
-      ctx.translate(screenX, coin.y + Math.sin(time + coin.phase) * 2.5);
-      ctx.rotate(Math.sin(time * 0.7 + coin.phase) * 0.08);
-      if (assets.coin.complete && assets.coin.naturalWidth) {
-        const size = 30;
-        ctx.shadowColor = 'rgba(255,190,0,.55)';
-        ctx.shadowBlur = 12;
-        ctx.drawImage(assets.coin, -size / 2, -size / 2, size, size);
-      } else {
-        ctx.fillStyle = '#ffd33d';
+      ctx.globalAlpha = clamp(spaceMix * 1.3, 0, 1);
+      for (let i = 0; i < 90; i++) {
+        const sx = ((i * 193.7 - G.cameraX * (0.01 + (i % 4) * 0.004)) % (W + 80) + W + 80) % (W + 80) - 40;
+        const sy = ((i * 83.3 + 27) % Math.max(120, H * 0.76));
+        const r = 0.7 + (i % 5) * 0.28;
+        ctx.fillStyle = i % 9 === 0 ? '#bde5ff' : '#ffffff';
         ctx.beginPath();
-        ctx.arc(0, 0, 11, 0, TAU);
+        ctx.arc(sx, sy, r, 0, TAU);
         ctx.fill();
       }
       ctx.restore();
     }
   }
 
-  function drawParticles(camera) {
+  function drawTerrain() {
+    const left = G.cameraX - W * 0.35 / G.zoom;
+    const right = G.cameraX + W * 1.15 / G.zoom;
+    const bottom = G.cameraY + H * 0.85 / G.zoom;
+    ctx.beginPath();
+    ctx.moveTo(left, bottom + 200);
+    for (let wx = left - 20; wx <= right + 20; wx += Math.max(5, 8 / G.zoom)) ctx.lineTo(wx, ground(wx));
+    ctx.lineTo(right + 20, bottom + 200);
+    ctx.closePath();
+    const gradient = ctx.createLinearGradient(0, G.cameraY - H / G.zoom, 0, bottom);
+    gradient.addColorStop(0, '#58cbb7');
+    gradient.addColorStop(1, '#109798');
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    ctx.beginPath();
+    for (let wx = left - 20; wx <= right + 20; wx += Math.max(5, 8 / G.zoom)) {
+      const y = ground(wx);
+      if (wx <= left - 19) ctx.moveTo(wx, y); else ctx.lineTo(wx, y);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,.62)';
+    ctx.lineWidth = 3 / G.zoom;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  function drawCoins() {
+    const time = performance.now() * 0.004;
+    const left = G.cameraX - W * 0.4 / G.zoom;
+    const right = G.cameraX + W * 1.2 / G.zoom;
+    for (const coin of coins.items) {
+      if (coin.taken || coin.x < left || coin.x > right) continue;
+      ctx.save();
+      ctx.translate(coin.x, coin.y + Math.sin(time + coin.phase) * 2.5);
+      ctx.rotate(Math.sin(time * 0.7 + coin.phase) * 0.08);
+      const size = 30;
+      ctx.shadowColor = 'rgba(255,190,0,.55)';
+      ctx.shadowBlur = 12 / G.zoom;
+      if (assets.coin.complete && assets.coin.naturalWidth) ctx.drawImage(assets.coin, -size / 2, -size / 2, size, size);
+      else { ctx.fillStyle = '#ffd33d'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill(); }
+      ctx.restore();
+    }
+  }
+
+  function drawParticles() {
     for (const p of particles.items) {
       ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x - camera, p.y, p.size * ctx.globalAlpha, 0, TAU);
+      ctx.arc(p.x, p.y, p.size * ctx.globalAlpha, 0, TAU);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
   }
 
-  function drawBall(camera) {
+  function drawBall() {
     const p = G.player;
     const skin = selectedSkin();
     ctx.save();
-    ctx.translate(p.x - camera, p.y);
+    ctx.translate(p.x, p.y);
     ctx.rotate(p.rotation);
     ctx.shadowColor = skin.color;
-    ctx.shadowBlur = save.settings.motion ? 13 : 6;
+    ctx.shadowBlur = (save.settings.motion ? 13 : 6) / G.zoom;
     if (assets.ball.complete && assets.ball.naturalWidth) {
       const size = p.drawRadius * 2;
       ctx.filter = `hue-rotate(${skin.hue}deg) saturate(1.12)`;
       ctx.drawImage(assets.ball, -size / 2, -size / 2, size, size);
       ctx.filter = 'none';
     } else {
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(0, 0, p.drawRadius, 0, TAU);
-      ctx.fill();
-      ctx.strokeStyle = skin.color;
-      ctx.lineWidth = 5;
-      ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, p.drawRadius, 0, TAU); ctx.fill();
+      ctx.strokeStyle = skin.color; ctx.lineWidth = 5; ctx.stroke();
     }
     ctx.restore();
   }
@@ -742,11 +871,13 @@
     const shakeY = G.shake > 0 ? (Math.random() - 0.5) * G.shake : 0;
     if (G.shake > 0) G.shake *= 0.88;
     ctx.save();
-    ctx.translate(shakeX, shakeY);
-    drawTerrain(G.camera);
-    drawCoins(G.camera);
-    drawParticles(G.camera);
-    drawBall(G.camera);
+    ctx.translate(W * 0.28 + shakeX, H * 0.58 + shakeY);
+    ctx.scale(G.zoom, G.zoom);
+    ctx.translate(-G.cameraX, -G.cameraY);
+    drawTerrain();
+    drawCoins();
+    drawParticles();
+    drawBall();
     ctx.restore();
   }
 
