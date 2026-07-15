@@ -1,17 +1,11 @@
-#game{contain:strict;transform:translateZ(0);backface-visibility:hidden}
-.menu-root,.result-screen,.pause-overlay,.splash-intro{contain:layout paint style}
-
-@media (hover:none) and (pointer:coarse){
-  .player-chip,.wallet-pill,.icon-button,.play-dock,.bottom-nav,.menu-panel,
-  .hud-pill,.risk-hud,.pause-button,.result-card,.pause-card{
-    -webkit-backdrop-filter:none!important;
-    backdrop-filter:none!important;
-  }
-  .player-chip,.wallet-pill,.icon-button,.play-dock,.bottom-nav{background:rgba(7,29,39,.9)}
-  .menu-panel,.result-card,.pause-card{background:rgba(7,27,37,.98)}
-  .hud-pill,.risk-hud,.pause-button{background:rgba(7,29,39,.88)}
-}
-
-@media (prefers-reduced-motion:reduce){
-  .menu-view.active{animation:none!important}
-}
+#game{contain:strict;will-change:contents;background:#22cbd4}
+.hud{padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));grid-template-columns:1fr auto 1fr;contain:layout style paint}
+.hud-pill,.risk-hud,.pause-button{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 5px 14px rgba(0,30,38,.18)!important;border:1px solid rgba(255,255,255,.14)!important;background:rgba(7,43,53,.92)!important}
+.hud-pill{min-width:88px;padding:7px 10px;border-radius:13px}.hud-pill span{font-size:7px;letter-spacing:.18em}.hud-pill strong{font-size:22px;line-height:1}.hud-pill small{font-size:9px!important;line-height:1.1;margin-top:3px!important;color:rgba(255,255,255,.6)!important}.coin-pill{min-width:84px}.coin-dot{width:14px;height:14px;border-width:2px;box-shadow:none}
+.hud-center{position:fixed!important;left:50%!important;top:max(8px,env(safe-area-inset-top))!important;transform:translateX(-50%)!important;display:block!important}.risk-hud{width:178px;min-height:48px;padding:7px 11px;border-radius:14px;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;column-gap:9px;align-items:center}.risk-hud>span{grid-column:1;font-size:7px;letter-spacing:.16em}.risk-hud>strong{grid-column:2;font-size:19px;line-height:1;text-align:center}.risk-hud>i{grid-column:3;font-size:18px;line-height:1}.risk-hud>small{grid-column:1/3;font-size:7px;letter-spacing:.14em;margin-top:3px}.risk-hud>b{grid-column:3;font-size:7px;letter-spacing:.1em;margin-top:3px;text-align:right;white-space:nowrap}
+.landing-toast{position:absolute;top:54px;left:50%;transform:translate(-50%,-5px) scale(.96);font-size:18px;white-space:nowrap}.landing-toast.show{transform:translate(-50%,0) scale(1)}
+.pause-button{top:max(13px,calc(env(safe-area-inset-top) + 5px))!important;left:calc(50% - 114px)!important;right:auto!important;width:38px!important;height:38px!important;border-radius:12px!important;transform:none!important}.pause-button span{width:3px;height:14px;margin:0 2px}
+.menu-shell,.menu-panel,.result-card,.pause-card,.floating-topbar,.play-dock,.bottom-nav{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.menu-shell,.menu-panel,.result-card,.pause-card{background:rgba(7,34,43,.97)!important}.menu-scrim{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:linear-gradient(180deg,rgba(3,30,38,.08),rgba(3,25,33,.32))!important}.world-fade{will-change:opacity}
+@media (orientation:landscape){.hud{padding-top:max(7px,env(safe-area-inset-top))}.hud-pill{min-width:82px;padding:6px 9px}.hud-pill strong{font-size:20px}.risk-hud{width:166px;min-height:44px;padding:6px 10px}.risk-hud>strong{font-size:17px}.risk-hud>i{font-size:17px}.pause-button{left:calc(50% - 106px)!important;width:34px!important;height:34px!important;top:max(12px,calc(env(safe-area-inset-top) + 4px))!important}}
+@media (max-height:430px) and (orientation:landscape){.hud-pill{min-width:76px;padding:5px 8px;border-radius:11px}.hud-pill span{font-size:6px}.hud-pill strong{font-size:18px}.hud-pill small{font-size:8px!important}.risk-hud{width:154px;min-height:40px;padding:5px 9px;border-radius:12px;column-gap:7px}.risk-hud>strong,.risk-hud>i{font-size:16px}.risk-hud>span,.risk-hud>small,.risk-hud>b{font-size:6px}.pause-button{left:calc(50% - 98px)!important;width:32px!important;height:32px!important}.landing-toast{top:45px;font-size:16px}}
+@media (prefers-reduced-motion:reduce){#game{will-change:auto}}
