@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2172 724" preserveAspectRatio="xMidYMid slice">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00c8d1"/><stop offset=".43" stop-color="#8ce8d8"/><stop offset=".68" stop-color="#e8f2a7"/><stop offset="1" stop-color="#f7ef9d"/></linearGradient>
+  <linearGradient id="far" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9be6c8"/><stop offset="1" stop-color="#5fc9af"/></linearGradient>
+  <linearGradient id="mid" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#74d7bd"/><stop offset="1" stop-color="#36b9a9"/></linearGradient>
+  <linearGradient id="near" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#53c8b5"/><stop offset="1" stop-color="#159fa0"/></linearGradient>
+</defs>
+<rect width="2172" height="724" fill="url(#sky)"/>
+<g fill="#d8fbeb" opacity=".48"><rect x="-35" y="112" width="158" height="78" rx="38"/><rect x="168" y="62" width="170" height="57" rx="28"/><rect x="414" y="150" width="116" height="39" rx="19"/><rect x="660" y="65" width="89" height="31" rx="15"/><rect x="747" y="173" width="123" height="44" rx="22"/><rect x="820" y="120" width="206" height="71" rx="35"/><rect x="1169" y="178" width="106" height="39" rx="19"/><rect x="1321" y="145" width="98" height="34" rx="17"/><rect x="1503" y="84" width="207" height="77" rx="38"/><rect x="1763" y="194" width="98" height="34" rx="17"/><rect x="1960" y="113" width="212" height="77" rx="38"/></g>
+<path d="M0 357c123 19 177 77 254 76 79-1 84-79 163-84 93-5 139 88 235 92 89 4 114-74 206-84 106-12 146 95 250 99 99 4 131-89 230-98 96-9 145 71 243 73 95 2 128-75 218-83 72-6 122 40 173 55v321H0z" fill="url(#far)" opacity=".78"/>
+<path d="M0 425c133-49 205 77 330 73 115-4 171-112 290-121 129-10 180 113 306 120 127 7 194-102 316-99 121 3 164 106 291 111 126 5 187-111 314-114 121-3 194 93 325 100v229H0z" fill="url(#mid)" opacity=".88"/>
+<path d="M0 520c120-46 210 17 317 25 115 9 193-42 304-43 126-1 204 81 328 79 121-2 177-91 297-91 126 0 202 91 331 91 115 0 186-61 300-62 103-1 192 43 295 83v122H0z" fill="url(#near)"/>
+<g fill="#ffffff" opacity=".16"><path d="M63 414c83-20 150 25 218 54-72-8-143 12-218 42z"/><path d="M458 381c91-31 153 4 223 54-83-13-148 7-223 44z"/><path d="M1009 366c78-30 149 2 215 55-86-16-151 11-215 48z"/><path d="M1622 398c72-29 148-8 216 46-80-10-147 7-216 43z"/></g>
+</svg>
