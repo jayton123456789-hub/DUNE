@@ -7,7 +7,7 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
   class SandRenderer {
-    constructor({ canvas, terrain, world, sand, coins, camera, selectedSkin }) {
+    constructor({ canvas, terrain, world, sand, coins, camera, selectedSkin, score, presentation }) {
       this.canvas = canvas;
       this.ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
       this.terrain = terrain;
@@ -16,6 +16,8 @@
       this.coins = coins;
       this.camera = camera;
       this.selectedSkin = selectedSkin;
+      this.score = score;
+      this.presentation = presentation;
       this.assets = { ball: new Image(), coin: new Image(), bg: new Image() };
       this.assets.ball.src = 'assets/ball.svg';
       this.assets.coin.src = 'assets/coin.svg';
@@ -58,9 +60,9 @@
     sky() {
       const c = this.ctx;
       const gradient = c.createLinearGradient(0, 0, 0, this.H);
-      gradient.addColorStop(0, '#29d1da');
-      gradient.addColorStop(0.57, '#d7f3df');
-      gradient.addColorStop(1, '#fff0ba');
+      gradient.addColorStop(0, '#20cbd5');
+      gradient.addColorStop(0.55, '#d6f3df');
+      gradient.addColorStop(1, '#fff0b8');
       c.fillStyle = gradient;
       c.fillRect(0, 0, this.W, this.H);
 
@@ -68,7 +70,7 @@
         const h = this.H;
         const w = h * this.assets.bg.naturalWidth / this.assets.bg.naturalHeight;
         const offset = -((this.camera.x * 0.06) % w + w) % w;
-        c.globalAlpha = 0.24 * (1 - this.camera.spaceBlend);
+        c.globalAlpha = 0.22 * (1 - this.camera.spaceBlend);
         for (let x = offset - w; x < this.W + w; x += w) c.drawImage(this.assets.bg, x, 0, w, h);
         c.globalAlpha = 1;
       }
@@ -85,6 +87,56 @@
         }
         c.globalAlpha = 1;
       }
+    }
+
+    scoreLine() {
+      if (!this.score) return;
+      const c = this.ctx;
+      const y = this.sy(this.score.config.lineY);
+      if (y < -80 || y > this.H + 80) return;
+      const snapshot = this.score.snapshot();
+      const time = performance.now() * 0.004;
+      const active = snapshot.aboveLine;
+      const pulse = active ? 0.75 + Math.sin(time * 2.2) * 0.18 : 0.42 + Math.sin(time) * 0.05;
+
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      c.strokeStyle = active ? `rgba(255,246,178,${pulse})` : `rgba(255,255,255,${pulse})`;
+      c.shadowColor = active ? '#ffe580' : '#d8ffff';
+      c.shadowBlur = active ? 22 : 11;
+      c.lineWidth = active ? 3.4 : 2.1;
+      c.setLineDash([14, 10]);
+      c.lineDashOffset = -time * (active ? 18 : 7);
+      c.beginPath();
+      c.moveTo(-30, y);
+      c.lineTo(this.W + 30, y);
+      c.stroke();
+      c.setLineDash([]);
+
+      const label = active ? `RISK +${snapshot.pending}` : 'SCORE LINE';
+      c.font = '900 10px ui-rounded, system-ui, sans-serif';
+      const width = c.measureText(label).width + 22;
+      const x = this.W - width - 16;
+      c.globalCompositeOperation = 'source-over';
+      c.shadowBlur = 0;
+      c.fillStyle = active ? 'rgba(255,228,112,.93)' : 'rgba(8,42,52,.68)';
+      const top = y - 15;
+      const radius = 12;
+      c.beginPath();
+      c.moveTo(x + radius, top);
+      c.lineTo(x + width - radius, top);
+      c.quadraticCurveTo(x + width, top, x + width, top + radius);
+      c.lineTo(x + width, top + 24 - radius);
+      c.quadraticCurveTo(x + width, top + 24, x + width - radius, top + 24);
+      c.lineTo(x + radius, top + 24);
+      c.quadraticCurveTo(x, top + 24, x, top + 24 - radius);
+      c.lineTo(x, top + radius);
+      c.quadraticCurveTo(x, top, x + radius, top);
+      c.closePath();
+      c.fill();
+      c.fillStyle = active ? '#17323a' : '#fff';
+      c.fillText(label, x + 11, y + 1);
+      c.restore();
     }
 
     tracks() {
@@ -114,7 +166,7 @@
 
       this.trace(start, end, step);
       const gradient = c.createLinearGradient(0, this.H * 0.2, 0, this.H);
-      gradient.addColorStop(0, this.camera.spaceBlend > 0.45 ? '#e4bc74' : '#ffe6a6');
+      gradient.addColorStop(0, this.camera.spaceBlend > 0.45 ? '#e5bd75' : '#ffe7a6');
       gradient.addColorStop(0.28, '#f8d27f');
       gradient.addColorStop(0.62, '#edbc62');
       gradient.addColorStop(1, '#d89b43');
@@ -214,13 +266,20 @@
       const c = this.ctx;
       const ball = this.world.ball;
       const skin = this.selectedSkin();
-      const size = clamp((ball.radius * 2 / 0.96875) * this.scale(), 20, 54);
+      const size = clamp((ball.radius * 2 / 0.96875) * this.scale(), 20, 56);
+      const time = performance.now() * 0.06;
       c.save();
       c.translate(this.sx(ball.x), this.sy(ball.y));
       c.rotate(ball.rotation);
-      c.filter = `hue-rotate(${skin.hue}deg) saturate(1.12)`;
-      c.shadowColor = 'rgba(18,92,105,.28)';
-      c.shadowBlur = clamp(9 * this.scale(), 4, 11);
+      if (skin.animated) {
+        c.shadowColor = `hsl(${time % 360} 100% 65%)`;
+        c.shadowBlur = clamp(22 * this.scale(), 12, 28);
+        c.filter = `hue-rotate(${time % 360}deg) saturate(1.65)`;
+      } else {
+        c.filter = `hue-rotate(${skin.hue}deg) saturate(1.12)`;
+        c.shadowColor = 'rgba(18,92,105,.28)';
+        c.shadowBlur = clamp(9 * this.scale(), 4, 11);
+      }
       if (this.assets.ball.complete) c.drawImage(this.assets.ball, -size / 2, -size / 2, size, size);
       else {
         c.fillStyle = '#fff';
@@ -229,10 +288,22 @@
         c.fill();
       }
       c.restore();
+
+      if (skin.animated) {
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        c.strokeStyle = `hsla(${(time + 100) % 360} 100% 70% / .55)`;
+        c.lineWidth = 2;
+        c.beginPath();
+        c.arc(this.sx(ball.x), this.sy(ball.y), size * 0.6, 0, TAU);
+        c.stroke();
+        c.restore();
+      }
     }
 
     draw() {
       this.sky();
+      this.scoreLine();
       this.ground();
       this.money();
       this.sandParticles();
