@@ -14,18 +14,31 @@
       this.routes = routes;
       this.onCollect = onCollect;
       this.prefetchDistance = 8200;
-      this.preserveDistance = 2700;
+      this.preserveDistance = 2800;
       this.maxRoutes = 7;
+      this.token = 0;
+      this.idleHandle = 0;
       this.reset();
     }
 
     reset() {
+      this.cancelScheduled();
+      this.token += 1;
       this.items = [];
       this.routeQueue = [];
       this.routeKeys = new Set();
       this.activeRoute = null;
       this.lastRebaseX = -Infinity;
-      this.prefill(this.world.ball);
+      this.pendingSeed = this.cloneBall(this.world.ball);
+      this.generateOne(true);
+      this.scheduleMore();
+    }
+
+    cancelScheduled() {
+      if (!this.idleHandle) return;
+      if ('cancelIdleCallback' in globalThis) cancelIdleCallback(this.idleHandle);
+      else clearTimeout(this.idleHandle);
+      this.idleHandle = 0;
     }
 
     cloneBall(ball) {
@@ -59,13 +72,14 @@
 
     predict(ball) {
       return this.routes.predictReleaseRoute(this.terrain, this.world.config, ball, {
-        maxGroundSeconds: 11,
-        maxAirSeconds: 9,
+        dt: 1 / 90,
+        maxGroundSeconds: 9,
+        maxAirSeconds: 7.5,
         minAirtime: 0.28,
         minDistance: 120,
         minAltitude: 12,
-        groundSampleEvery: 12,
-        airSampleEvery: 3
+        groundSampleEvery: 15,
+        airSampleEvery: 4
       });
     }
 
@@ -91,22 +105,47 @@
       return true;
     }
 
-    appendFrom(seedBall) {
-      let ghost = this.cloneBall(seedBall);
-      let guard = 0;
-      while (guard++ < this.maxRoutes) {
-        const route = this.predict(ghost);
-        if (!route || route.launch.x <= ghost.x + 55) break;
-        this.addRoute(route);
-        ghost = this.landingState(route, ghost.radius);
-        const furthest = this.routeQueue[this.routeQueue.length - 1];
-        if (furthest && furthest.landing.x >= this.world.ball.x + this.prefetchDistance) break;
-      }
+    needsMore() {
+      if (this.routeQueue.length >= this.maxRoutes) return false;
+      const furthest = this.routeQueue[this.routeQueue.length - 1];
+      return !furthest || furthest.landing.x < this.world.ball.x + this.prefetchDistance;
     }
 
-    prefill(ball) {
-      this.appendFrom(this.cloneBall(ball));
+    generateOne(initial = false) {
+      const seed = this.pendingSeed || this.cloneBall(this.world.ball);
+      const route = this.predict(seed);
+      if (!route || route.launch.x <= seed.x + 55) {
+        if (!initial) this.pendingSeed = this.cloneBall(this.world.ball);
+        return false;
+      }
+      this.addRoute(route);
+      this.pendingSeed = this.landingState(route, seed.radius);
       this.updateActiveRoute();
+      return true;
+    }
+
+    scheduleMore() {
+      if (this.idleHandle || !this.needsMore()) return;
+      const token = this.token;
+      const callback = deadline => {
+        this.idleHandle = 0;
+        if (token !== this.token) return;
+        if (!this.world.ball.grounded) {
+          this.idleHandle = setTimeout(() => {
+            this.idleHandle = 0;
+            if (token === this.token) this.scheduleMore();
+          }, 140);
+          return;
+        }
+        const timeRemaining = typeof deadline?.timeRemaining === 'function' ? deadline.timeRemaining() : 4;
+        if (timeRemaining > 1 || !deadline) this.generateOne(false);
+        if (this.needsMore()) this.scheduleMore();
+      };
+      if ('requestIdleCallback' in globalThis) {
+        this.idleHandle = requestIdleCallback(callback, { timeout: 120 });
+      } else {
+        this.idleHandle = setTimeout(() => callback(null), 24);
+      }
     }
 
     rebaseFromActualBall(ball) {
@@ -116,11 +155,11 @@
       this.routeQueue = keptRoutes;
       this.routeKeys = keptKeys;
       this.items = this.items.filter(coin => coin.x < preserveUntil || keptKeys.has(coin.routeKey));
-      const seed = keptRoutes.length
+      this.pendingSeed = keptRoutes.length
         ? this.landingState(keptRoutes[keptRoutes.length - 1], ball.radius)
         : this.cloneBall(ball);
-      this.appendFrom(seed);
       this.lastRebaseX = ball.x;
+      this.scheduleMore();
     }
 
     updateActiveRoute() {
@@ -135,15 +174,18 @@
       this.routeKeys = new Set(this.routeQueue.map(route => route.key));
 
       const justLanded = ball.grounded && ball.groundTime < 0.14;
-      if (justLanded && ball.x - this.lastRebaseX > 260) {
-        this.rebaseFromActualBall(ball);
+      if (justLanded && ball.x - this.lastRebaseX > 260) this.rebaseFromActualBall(ball);
+      if (!ball.grounded) {
+        this.updateActiveRoute();
+        return;
       }
 
       const furthest = this.routeQueue[this.routeQueue.length - 1];
-      if (!furthest || furthest.landing.x < ball.x + this.prefetchDistance) {
-        const seed = furthest ? this.landingState(furthest, ball.radius) : this.cloneBall(ball);
-        this.appendFrom(seed);
+      if (!furthest) this.pendingSeed = this.cloneBall(ball);
+      else if (!this.pendingSeed || this.pendingSeed.x < furthest.landing.x - 10) {
+        this.pendingSeed = this.landingState(furthest, ball.radius);
       }
+      this.scheduleMore();
       this.updateActiveRoute();
     }
 
