@@ -1,23 +1,25 @@
-const CACHE_NAME = 'driftline-performance-v14';
+const CACHE_NAME = 'driftline-ultra-performance-v14-2';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=14',
-  './intro-stability.css?v=14',
-  './v14-performance.css?v=14',
-  './src/physics-core.js?v=14',
-  './src/v14-route.js?v=14',
-  './src/sand-effects.js?v=14',
-  './src/v14-coins.js?v=14',
-  './src/score-system.js?v=14',
-  './src/autopilot.js?v=14',
-  './src/game-ui.js?v=14',
-  './src/audio-guard.js?v=14',
-  './src/sand-renderer.js?v=14',
-  './src/v14-performance.js?v=14',
-  './src/intro-cinematic.js?v=14',
-  './src/stable-main.js?v=14',
-  './src/sw-register.js?v=14',
+  './styles.css?v=14.2',
+  './intro-stability.css?v=14.2',
+  './v14-performance.css?v=14.2',
+  './src/physics-core.js?v=14.2',
+  './src/v14-ultra-engine.js?v=14.2',
+  './src/v14-route.js?v=14.2',
+  './src/sand-effects.js?v=14.2',
+  './src/v14-ultra-sand.js?v=14.2',
+  './src/v14-coins.js?v=14.2',
+  './src/score-system.js?v=14.2',
+  './src/autopilot.js?v=14.2',
+  './src/game-ui.js?v=14.2',
+  './src/audio-guard.js?v=14.2',
+  './src/sand-renderer.js?v=14.2',
+  './src/v14-ultra-renderer.js?v=14.2',
+  './src/intro-cinematic.js?v=14.2',
+  './src/stable-main.js?v=14.2',
+  './src/sw-register.js?v=14.2',
   './manifest.webmanifest',
   './assets/icon.svg',
   './assets/ball.svg',
@@ -52,9 +54,7 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request, { cache: 'no-store' })
       .then(response => {
-        if (response && response.status === 200) {
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
-        }
+        if (response && response.status === 200) caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
         return response;
       })
       .catch(async () => {
