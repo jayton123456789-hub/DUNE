@@ -10,7 +10,7 @@
   <link rel="preload" href="assets/background.svg" as="image" />
   <link rel="preload" href="assets/ball.svg" as="image" />
   <link rel="preload" href="assets/coin.svg" as="image" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=11" />
   <title>Driftline</title>
 </head>
 <body>
@@ -73,7 +73,7 @@
             <button class="menu-tile" type="button" data-open-view="help"><span class="tile-icon">?</span><b>HOW TO PLAY</b><small>Master momentum</small></button>
           </nav>
 
-          <p class="version-label">DRIFTLINE v1.3 · NEWTON PHYSICS</p>
+          <p class="version-label">DRIFTLINE v1.4 · SAND ROUTES</p>
         </div>
       </section>
 
@@ -137,7 +137,7 @@
             <article><span class="guide-number">02</span><div><b>RELEASE TO FLOAT</b><p>Let go on the climb. The ground releases the ball when it can no longer push it.</p></div></article>
             <article><span class="guide-number">03</span><div><b>MATCH THE VECTOR</b><p>Land parallel to the dune. Normal impact force decides whether you survive.</p></div></article>
           </div>
-          <div class="control-demo"><span class="demo-ball"></span><div class="demo-line"></div><p>The opening valley is tuned to generate a large natural first jump.</p></div>
+          <div class="control-demo"><span class="demo-ball"></span><div class="demo-line"></div><p>Coin lines now follow the predicted natural release path from each dune.</p></div>
         </div>
       </section>
     </section>
@@ -171,8 +171,13 @@
     <div id="toastMessage" class="system-toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script defer src="src/physics-core.js?v=9"></script>
-  <script defer src="src/balanced-game.js?v=9"></script>
-  <script defer src="src/sw-register.js?v=9"></script>
+  <script defer src="src/physics-core.js?v=11"></script>
+  <script defer src="src/coin-route.js?v=11"></script>
+  <script defer src="src/sand-effects.js?v=11"></script>
+  <script defer src="src/smart-coins.js?v=11"></script>
+  <script defer src="src/game-ui.js?v=11"></script>
+  <script defer src="src/sand-renderer.js?v=11"></script>
+  <script defer src="src/sand-main.js?v=11"></script>
+  <script defer src="src/sw-register.js?v=11"></script>
 </body>
 </html>
