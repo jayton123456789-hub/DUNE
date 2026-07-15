@@ -114,20 +114,20 @@
   let W = 1;
   let H = 1;
   let DPR = 1;
+  let G = null;
   function resize() {
-    const viewport = window.visualViewport;
-    W = Math.max(280, Math.round(viewport?.width || window.innerWidth));
-    H = Math.max(320, Math.round(viewport?.height || window.innerHeight));
+    W = Math.max(280, Math.round(window.innerWidth));
+    H = Math.max(320, Math.round(window.innerHeight));
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
     canvas.style.width = `${W}px`;
     canvas.style.height = `${H}px`;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (G.player.onGround) G.player.y = ground(G.player.x) - G.player.radius;
+    if (G?.player?.onGround) G.player.y = ground(G.player.x) - G.player.radius;
   }
   addEventListener('resize', resize, { passive: true });
-  window.visualViewport?.addEventListener('resize', resize, { passive: true });
+  addEventListener('orientationchange', () => setTimeout(resize, 150), { passive: true });
   resize();
 
   const assets = { ball: new Image(), coin: new Image(), bg: new Image() };
@@ -296,7 +296,7 @@
   const coins = new CoinField();
   const particles = new ParticleSystem();
   const START_X = 150;
-  const G = {
+  G = {
     state: 'menu',
     menuReturn: 'main',
     held: false,
