@@ -3,138 +3,180 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#08bfc8" />
-  <meta name="description" content="Driftline — a polished one-touch momentum arcade game." />
+  <meta name="theme-color" content="#0d8895" />
+  <meta name="description" content="Driftline — a one-touch momentum arcade game." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
   <link rel="preload" href="assets/background.svg" as="image" />
   <link rel="preload" href="assets/ball.svg" as="image" />
   <link rel="preload" href="assets/coin.svg" as="image" />
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=13" />
   <title>Driftline</title>
 </head>
 <body>
   <main id="app" aria-label="Driftline arcade game">
     <canvas id="game" aria-label="Driftline game canvas"></canvas>
+    <div id="worldFade" class="world-fade" aria-hidden="true"></div>
+
+    <section id="splashIntro" class="splash-intro" aria-label="Driftline intro" aria-hidden="true">
+      <div class="intro-vignette"></div>
+      <div id="splashLogo" class="splash-logo">
+        <span class="logo-mark"><i></i></span>
+        <div><small>ONE-TOUCH MOMENTUM</small><strong>DRIFTLINE</strong></div>
+      </div>
+      <p class="intro-caption">Ride the curve. Cross the line. Bank the landing.</p>
+      <button id="skipIntro" class="skip-intro" type="button">SKIP</button>
+    </section>
 
     <header id="hud" class="hud" aria-hidden="true">
-      <div class="hud-pill"><span>DISTANCE</span><strong id="scoreValue">0 m</strong></div>
+      <div class="hud-pill score-pill">
+        <span>SCORE</span>
+        <strong id="scoreValue">0</strong>
+        <small id="distanceValue">0 m</small>
+      </div>
       <div class="hud-center">
         <div id="landingToast" class="landing-toast" aria-live="polite"></div>
-        <div class="stunt-hud"><strong id="multiplierValue">×1.0</strong><span id="speedLabel">CRUISE</span><small id="altitudeLabel">GROUND</small></div>
+        <div class="risk-hud">
+          <span>RISK</span><strong id="pendingScore">—</strong>
+          <i id="multiplierValue">×1.0</i>
+          <small id="speedLabel">CRUISE</small>
+          <b id="altitudeLabel">GROUND</b>
+        </div>
       </div>
-      <div class="hud-pill align-right"><span>COINS</span><strong><i class="coin-dot"></i><b id="runCoins">0</b></strong></div>
+      <div class="hud-pill coin-pill">
+        <span>COINS</span>
+        <strong><i class="coin-dot"></i><b id="runCoins">0</b></strong>
+      </div>
     </header>
 
     <button id="pauseButton" class="pause-button" type="button" aria-label="Pause game" aria-hidden="true"><span></span><span></span></button>
 
-    <section id="menuRoot" class="menu-root active" aria-label="Game menus">
+    <section id="menuRoot" class="menu-root" aria-label="Game menus">
       <div class="menu-scrim"></div>
-      <section id="mainMenu" class="menu-view active" data-view="main" aria-label="Main menu">
-        <div class="menu-shell hero-shell">
-          <div class="menu-topbar">
-            <div class="brand-mini"><span class="brand-orb"></span><b>DRIFTLINE</b></div>
+
+      <section class="menu-view active" data-view="main" aria-label="Main menu">
+        <div class="main-menu-layout">
+          <header class="floating-topbar">
+            <div class="player-chip"><span class="brand-orb"></span><div><small>LEVEL <b id="levelValue">1</b></small><strong>DRIFTLINE</strong></div></div>
+            <button class="icon-button" type="button" data-open-view="settings" aria-label="Settings">⚙</button>
             <div class="wallet-pill"><img src="assets/coin.svg" alt="" /><strong id="walletCoins">0</strong></div>
+          </header>
+
+          <div class="menu-title">
+            <p>ONE-TOUCH MOMENTUM</p>
+            <h1>DRIFT<span>LINE</span></h1>
           </div>
-          <div class="hero-copy">
-            <p class="eyebrow">ONE-TOUCH MOMENTUM</p>
-            <h1>RIDE THE<br /><em>PERFECT LINE</em></h1>
-            <p>Dive through valleys, launch over crests, and keep your speed alive.</p>
+
+          <div class="play-dock">
+            <div class="record-strip">
+              <div><span>BEST SCORE</span><strong id="bestScore">0</strong></div>
+              <div><span>BEST DISTANCE</span><strong id="bestDistance">0 m</strong></div>
+              <div><span>BALL</span><strong id="selectedSkinName">Aqua</strong></div>
+            </div>
+            <div class="goal-card"><span>CURRENT GOAL</span><strong id="currentGoal">Cross the score line and land smoothly</strong></div>
+            <button id="playButton" class="play-button" type="button"><span>PLAY</span><small>Hold to dive · Release to float</small></button>
           </div>
-          <div class="hero-stats">
-            <div><span>BEST RUN</span><strong id="bestScore">0 m</strong></div>
-            <div><span>SELECTED BALL</span><strong id="selectedSkinName">Aqua</strong></div>
-          </div>
-          <button id="playButton" class="play-button" type="button"><span>PLAY</span><small>Hold to dive · Release to launch</small></button>
-          <nav class="menu-grid" aria-label="Main menu options">
-            <button class="menu-tile" type="button" data-open-view="shop"><span class="tile-icon">◉</span><b>SHOP</b><small>Ball skins</small></button>
-            <button class="menu-tile" type="button" data-open-view="settings"><span class="tile-icon">⚙</span><b>SETTINGS</b><small>Sound & feel</small></button>
-            <button class="menu-tile" type="button" data-open-view="stats"><span class="tile-icon">↗</span><b>STATS</b><small>Your records</small></button>
-            <button class="menu-tile" type="button" data-open-view="help"><span class="tile-icon">?</span><b>HOW TO PLAY</b><small>Master momentum</small></button>
+
+          <nav class="bottom-nav" aria-label="Main navigation">
+            <button type="button" data-nav-view="garage"><span>◉</span><b>GARAGE</b></button>
+            <button type="button" data-nav-view="worlds"><span>◒</span><b>WORLDS</b></button>
+            <button type="button" data-nav-view="challenges"><span>◆</span><b>CHALLENGES</b></button>
+            <button type="button" data-nav-view="records"><span>↗</span><b>RECORDS</b></button>
           </nav>
-          <p class="version-label">DRIFTLINE v1.4 · DRY DUNES</p>
         </div>
       </section>
 
-      <section id="shopScreen" class="menu-view" data-view="shop" aria-label="Ball shop" aria-hidden="true">
-        <div class="menu-shell panel-shell">
+      <section class="menu-view" data-view="garage" aria-label="Garage" aria-hidden="true">
+        <div class="menu-panel wide-panel">
           <header class="panel-header">
-            <button class="back-button" type="button" data-open-view="main" aria-label="Back to main menu">‹</button>
-            <div><p class="eyebrow">COSMETICS</p><h2>BALL SHOP</h2></div>
-            <div class="wallet-pill"><img src="assets/coin.svg" alt="" /><strong id="shopWalletCoins">0</strong></div>
+            <button class="back-button" type="button" data-open-view="main">‹</button>
+            <div><p>COLLECTION</p><h2>GARAGE</h2></div>
+            <div class="wallet-pill"><img src="assets/coin.svg" alt="" /><strong id="garageWalletCoins">0</strong></div>
           </header>
-          <p class="panel-copy">Coins unlock visual styles only. Every ball uses the same fair hitbox.</p>
-          <div id="shopGrid" class="shop-grid"></div>
+          <p class="panel-copy">Every ball uses identical physics. Legendary designs change glow, trail, and presentation only.</p>
+          <div id="garageGrid" class="garage-grid"></div>
         </div>
       </section>
 
-      <section id="settingsScreen" class="menu-view" data-view="settings" aria-label="Settings" aria-hidden="true">
-        <div class="menu-shell panel-shell narrow-shell">
-          <header class="panel-header">
-            <button class="back-button" type="button" data-open-view="main" aria-label="Back to main menu">‹</button>
-            <div><p class="eyebrow">PREFERENCES</p><h2>SETTINGS</h2></div>
-            <div class="header-spacer"></div>
-          </header>
-          <div class="settings-list">
-            <button class="setting-row" type="button" data-setting="sound"><span><b>Sound</b><small>Music-free arcade effects</small></span><i id="soundToggle" class="toggle"></i></button>
-            <button class="setting-row" type="button" data-setting="vibration"><span><b>Haptics</b><small>Vibration on coins and impacts</small></span><i id="vibrationToggle" class="toggle"></i></button>
-            <button class="setting-row" type="button" data-setting="motion"><span><b>Effects</b><small>Particles, trails, and camera shake</small></span><i id="motionToggle" class="toggle"></i></button>
+      <section class="menu-view" data-view="worlds" aria-label="Worlds" aria-hidden="true">
+        <div class="menu-panel">
+          <header class="panel-header"><button class="back-button" type="button" data-open-view="main">‹</button><div><p>ENVIRONMENTS</p><h2>WORLDS</h2></div><div class="header-spacer"></div></header>
+          <div class="world-grid">
+            <article class="world-card selected"><div class="world-preview desert"></div><small>EQUIPPED</small><h3>Dry Dunes</h3><p>Golden sand, turquoise sky, classic scoring line.</p></article>
+            <article class="world-card locked"><div class="world-preview sunset"></div><small>V14 COLLECTION</small><h3>Solar Sunset</h3><p>Full world sets arrive with progression.</p></article>
+            <article class="world-card locked"><div class="world-preview lunar"></div><small>V14 COLLECTION</small><h3>Lunar Dust</h3><p>World overlays remain cosmetic and preserve physics.</p></article>
           </div>
-          <div class="settings-note"><b>iPhone tip</b><p>Add Driftline to your Home Screen for the cleanest full-screen experience.</p></div>
+        </div>
+      </section>
+
+      <section class="menu-view" data-view="challenges" aria-label="Challenges" aria-hidden="true">
+        <div class="menu-panel">
+          <header class="panel-header"><button class="back-button" type="button" data-open-view="main">‹</button><div><p>MASTERY</p><h2>CHALLENGES</h2></div><div class="header-spacer"></div></header>
+          <div class="challenge-preview-list">
+            <article><span>01</span><div><h3>Line Runner</h3><p>Cross the score line three times in one run.</p></div><b>V14</b></article>
+            <article><span>02</span><div><h3>Clean Sweep</h3><p>Collect an entire predictive coin route.</p></div><b>V14</b></article>
+            <article><span>03</span><div><h3>Butter Chain</h3><p>Bank three smooth landings consecutively.</p></div><b>V14</b></article>
+          </div>
+          <div class="coming-card"><strong>Exclusive rewards are next.</strong><p>Challenge-only balls, trails, score lines, and achievement badges will arrive in the combined progression update.</p></div>
+        </div>
+      </section>
+
+      <section class="menu-view" data-view="records" aria-label="Records" aria-hidden="true">
+        <div class="menu-panel">
+          <header class="panel-header"><button class="back-button" type="button" data-open-view="main">‹</button><div><p>CAREER</p><h2>RECORDS</h2></div><button class="icon-button" type="button" data-open-view="help">?</button></header>
+          <div class="records-grid">
+            <article class="featured"><span>BEST SCORE</span><strong id="recordScore">0</strong></article>
+            <article><span>BEST DISTANCE</span><strong id="recordDistance">0 m</strong></article>
+            <article><span>MAX ALTITUDE</span><strong id="recordAltitude">0 px</strong></article>
+            <article><span>LONGEST AIR</span><strong id="recordAir">0.00 s</strong></article>
+            <article><span>TOP SPEED</span><strong id="recordSpeed">0 km/h</strong></article>
+            <article><span>BEST CHAIN</span><strong id="recordChain">×1.0</strong></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="menu-view" data-view="settings" aria-label="Settings" aria-hidden="true">
+        <div class="menu-panel narrow-panel">
+          <header class="panel-header"><button class="back-button" type="button" data-open-view="main">‹</button><div><p>PREFERENCES</p><h2>SETTINGS</h2></div><div class="header-spacer"></div></header>
+          <div class="settings-list">
+            <button class="setting-row" type="button" data-setting="sound"><span><b>Sound</b><small>Arcade effects and scoring tones</small></span><i id="soundToggle" class="toggle"></i></button>
+            <button class="setting-row" type="button" data-setting="vibration"><span><b>Haptics</b><small>Line crossings, banks, and impacts</small></span><i id="vibrationToggle" class="toggle"></i></button>
+            <button class="setting-row" type="button" data-setting="motion"><span><b>Effects</b><small>Sand, glow, and cinematic motion</small></span><i id="motionToggle" class="toggle"></i></button>
+          </div>
           <button id="resetDataButton" class="danger-button" type="button">Reset Save Data</button>
         </div>
       </section>
 
-      <section id="statsScreen" class="menu-view" data-view="stats" aria-label="Player statistics" aria-hidden="true">
-        <div class="menu-shell panel-shell narrow-shell">
-          <header class="panel-header">
-            <button class="back-button" type="button" data-open-view="main" aria-label="Back to main menu">‹</button>
-            <div><p class="eyebrow">CAREER</p><h2>STATS</h2></div>
-            <div class="header-spacer"></div>
-          </header>
-          <div class="career-card">
-            <div class="career-hero"><span>BEST DISTANCE</span><strong id="statsBest">0 m</strong></div>
-            <div class="career-grid">
-              <div><span>TOTAL RUNS</span><strong id="statsRuns">0</strong></div>
-              <div><span>LIFETIME COINS</span><strong id="statsCoins">0</strong></div>
-              <div><span>PERFECT LANDINGS</span><strong id="statsPerfects">0</strong></div>
-              <div><span>OWNED SKINS</span><strong id="statsSkins">1 / 6</strong></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="helpScreen" class="menu-view" data-view="help" aria-label="How to play" aria-hidden="true">
-        <div class="menu-shell panel-shell">
-          <header class="panel-header">
-            <button class="back-button" type="button" data-open-view="main" aria-label="Back to main menu">‹</button>
-            <div><p class="eyebrow">QUICK GUIDE</p><h2>HOW TO PLAY</h2></div>
-            <div class="header-spacer"></div>
-          </header>
+      <section class="menu-view" data-view="help" aria-label="How to play" aria-hidden="true">
+        <div class="menu-panel">
+          <header class="panel-header"><button class="back-button" type="button" data-open-view="records">‹</button><div><p>QUICK GUIDE</p><h2>HOW TO PLAY</h2></div><div class="header-spacer"></div></header>
           <div class="guide-grid">
-            <article><span class="guide-number">01</span><div><b>HOLD TO DIVE</b><p>Press through downhill sections to increase gravity and build speed.</p></div></article>
-            <article><span class="guide-number">02</span><div><b>RELEASE TO FLOAT</b><p>Let go on the climb. The ground releases the ball when it can no longer push it.</p></div></article>
-            <article><span class="guide-number">03</span><div><b>MATCH THE VECTOR</b><p>Land parallel to the dune. Normal impact force decides whether you survive.</p></div></article>
+            <article><span>01</span><div><b>BUILD MOMENTUM</b><p>Hold through descents to push harder into valleys.</p></div></article>
+            <article><span>02</span><div><b>CROSS THE LINE</b><p>Points accumulate only while your ball is above the glowing score line.</p></div></article>
+            <article><span>03</span><div><b>BANK THE RISK</b><p>Land smoothly to keep the full pending score. Rough landings lose part of it.</p></div></article>
           </div>
-          <div class="control-demo"><span class="demo-ball"></span><div class="demo-line"></div><p>The opening valley is tuned to generate a large natural first jump.</p></div>
         </div>
       </section>
     </section>
 
     <section id="gameOverScreen" class="result-screen" aria-label="Game over" aria-hidden="true">
       <div class="result-card">
-        <p class="eyebrow">RUN COMPLETE</p><h2 id="gameOverTitle">Hard landing</h2><p id="gameOverReason" class="result-reason">Match the slope before touching down.</p>
-        <div class="result-score"><span>DISTANCE</span><strong id="finalScore">0 m</strong></div>
-        <div class="result-stats"><div><span>BEST</span><strong id="finalBest">0 m</strong></div><div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div></div>
-        <button id="retryButton" class="play-button compact-play" type="button"><span>RETRY</span><small>Instant restart</small></button>
-        <div class="result-actions"><button id="resultShopButton" class="secondary-action" type="button">SHOP</button><button id="menuButton" class="secondary-action" type="button">MAIN MENU</button></div>
+        <p>RUN COMPLETE</p><h2 id="gameOverTitle">Rolled backward</h2><small id="gameOverReason">The ball lost forward momentum.</small>
+        <div class="final-score"><span>SCORE</span><strong id="finalScore">0</strong></div>
+        <div class="result-stats">
+          <div><span>DISTANCE</span><strong id="finalDistance">0 m</strong></div>
+          <div><span>BEST SCORE</span><strong id="finalBest">0</strong></div>
+          <div><span>COINS</span><strong><i class="coin-dot"></i><b id="finalCoins">0</b></strong></div>
+        </div>
+        <button id="retryButton" class="play-button compact" type="button"><span>RETRY</span><small>Instant restart</small></button>
+        <div class="result-actions"><button id="resultGarageButton" type="button">GARAGE</button><button id="menuButton" type="button">MAIN MENU</button></div>
       </div>
     </section>
 
     <section id="pauseOverlay" class="pause-overlay" aria-label="Paused" aria-hidden="true">
       <div class="pause-card">
-        <p class="eyebrow">GAME PAUSED</p><h2>TAKE A BREATH</h2>
-        <button id="resumeButton" class="play-button compact-play" type="button"><span>RESUME</span></button>
+        <p>GAME PAUSED</p><h2>HOLD THE LINE</h2>
+        <button id="resumeButton" class="play-button compact" type="button"><span>RESUME</span></button>
         <button id="restartButton" class="pause-action" type="button">Restart Run</button>
         <button id="pauseSettingsButton" class="pause-action" type="button">Settings</button>
         <button id="pauseMenuButton" class="pause-action quiet" type="button">Main Menu</button>
@@ -144,13 +186,15 @@
     <div id="toastMessage" class="system-toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script defer src="src/physics-core.js?v=12"></script>
-  <script defer src="src/coin-route.js?v=12"></script>
-  <script defer src="src/sand-effects.js?v=12"></script>
-  <script defer src="src/smart-coins.js?v=12"></script>
-  <script defer src="src/game-ui.js?v=12"></script>
-  <script defer src="src/sand-renderer.js?v=12"></script>
-  <script defer src="src/sand-main.js?v=12"></script>
-  <script defer src="src/sw-register.js?v=12"></script>
+  <script defer src="src/physics-core.js?v=13"></script>
+  <script defer src="src/coin-route.js?v=13"></script>
+  <script defer src="src/sand-effects.js?v=13"></script>
+  <script defer src="src/smart-coins.js?v=13"></script>
+  <script defer src="src/score-system.js?v=13"></script>
+  <script defer src="src/autopilot.js?v=13"></script>
+  <script defer src="src/game-ui.js?v=13"></script>
+  <script defer src="src/sand-renderer.js?v=13"></script>
+  <script defer src="src/sand-main.js?v=13"></script>
+  <script defer src="src/sw-register.js?v=13"></script>
 </body>
 </html>
