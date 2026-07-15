@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gold crown coin">
+<defs>
+  <radialGradient id="gold" cx="35%" cy="25%" r="82%"><stop offset="0" stop-color="#fff978"/><stop offset=".28" stop-color="#ffd72b"/><stop offset=".7" stop-color="#ffad00"/><stop offset="1" stop-color="#c96a00"/></radialGradient>
+  <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff67c"/><stop offset=".35" stop-color="#ffc10a"/><stop offset=".72" stop-color="#e47c00"/><stop offset="1" stop-color="#9b4300"/></linearGradient>
+  <linearGradient id="crown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff766"/><stop offset=".5" stop-color="#ffd21b"/><stop offset="1" stop-color="#f39b00"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="11" flood-color="#6c3700" flood-opacity=".32"/></filter>
+  <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+<g filter="url(#shadow)">
+  <circle cx="256" cy="256" r="232" fill="url(#rim)" stroke="#9d4d00" stroke-width="8"/>
+  <circle cx="256" cy="256" r="205" fill="url(#gold)" stroke="#fff36d" stroke-width="7"/>
+  <circle cx="256" cy="256" r="165" fill="#f5a600" stroke="#9f4a00" stroke-width="13"/>
+  <circle cx="256" cy="256" r="149" fill="url(#gold)" stroke="#ffd83b" stroke-width="5"/>
+  <path d="M147 312l-22-126 73 57 58-113 58 113 73-57-22 126c-2 13-12 23-25 26-55 13-113 13-168 0-13-3-23-13-25-26z" fill="url(#crown)" stroke="#a85000" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M157 303c65 15 133 15 198 0" fill="none" stroke="#fff074" stroke-width="8" stroke-linecap="round" opacity=".72"/>
+  <path d="M181 221c16 18 28 43 30 70M331 221c-16 18-28 43-30 70" fill="none" stroke="#fff987" stroke-width="7" stroke-linecap="round" opacity=".58"/>
+  <ellipse cx="181" cy="142" rx="67" ry="27" fill="#fff" opacity=".24" transform="rotate(-24 181 142)" filter="url(#soft)"/>
+  <path d="M96 107l13 29 29 13-29 13-13 29-13-29-29-13 29-13z" fill="#fff" opacity=".95"/>
+</g>
+</svg>
