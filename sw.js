@@ -1,11 +1,11 @@
-const CACHE_NAME = 'driftline-newton-v8';
+const CACHE_NAME = 'driftline-balanced-v9';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=8',
-  './src/physics-core.js?v=8',
-  './src/newton-game.js?v=8',
-  './src/sw-register.js?v=8',
+  './styles.css?v=9',
+  './src/physics-core.js?v=9',
+  './src/balanced-game.js?v=9',
+  './src/sw-register.js?v=9',
   './manifest.webmanifest',
   './assets/icon.svg',
   './assets/ball.svg',
@@ -18,7 +18,11 @@ self.addEventListener('message', event => {
 });
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -36,7 +40,9 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request, { cache: 'no-store' })
       .then(response => {
-        if (response && response.status === 200) caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+        if (response && response.status === 200) {
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+        }
         return response;
       })
       .catch(async () => {
