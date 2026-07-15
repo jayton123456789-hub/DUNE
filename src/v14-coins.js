@@ -1,8 +1,8 @@
-(function attachV14Coins(root, factory) {
+(function attachUltraCoins(root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.DriftSmartCoins = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function createV14Coins() {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createUltraCoins() {
   'use strict';
 
   const dot = (ax, ay, bx, by) => ax * bx + ay * by;
@@ -13,15 +13,13 @@
       this.terrain = terrain;
       this.routes = routes;
       this.onCollect = typeof onCollect === 'function' ? onCollect : () => {};
-      this.prefetchDistance = 4600;
-      this.preserveDistance = 1750;
-      this.maxRoutes = 3;
-      this.maxItems = 27;
-      this.minimumCoinSpacing = 82;
+      this.prefetchDistance = 3600;
+      this.preserveDistance = 1450;
+      this.maxRoutes = 2;
+      this.maxItems = 16;
+      this.minimumCoinSpacing = 116;
       this.token = 0;
       this.idleHandle = 0;
-      this.lastMaintenance = 0;
-      this.wasGrounded = Boolean(world.ball.grounded);
       this.reset();
     }
 
@@ -35,7 +33,7 @@
       this.lastRebaseX = -Infinity;
       this.pendingSeed = this.cloneBall(this.world.ball);
       this.wasGrounded = Boolean(this.world.ball.grounded);
-      this.generateOne(true);
+      this.generateOne();
       this.scheduleMore();
     }
 
@@ -77,36 +75,39 @@
 
     predict(ball) {
       return this.routes.predictReleaseRoute(this.terrain, this.world.config, ball, {
-        dt: 1 / 90,
-        maxGroundSeconds: 7.5,
-        maxAirSeconds: 7,
-        minAirtime: 0.3,
-        minDistance: 150,
-        minAltitude: 16,
-        groundSampleEvery: 14,
-        airSampleEvery: 3
+        dt: 1 / 75,
+        maxGroundSeconds: 7,
+        maxAirSeconds: 6.5,
+        minAirtime: 0.32,
+        minDistance: 175,
+        minAltitude: 18,
+        groundSampleEvery: 16,
+        airSampleEvery: 4
       });
     }
 
     routeOverlaps(route) {
-      return this.routeQueue.some(existing => {
-        const launchClose = Math.abs(existing.launch.x - route.launch.x) < 150;
-        const landingClose = Math.abs(existing.landing.x - route.landing.x) < 240;
+      for (let index = 0; index < this.routeQueue.length; index += 1) {
+        const existing = this.routeQueue[index];
+        const launchClose = Math.abs(existing.launch.x - route.launch.x) < 180;
+        const landingClose = Math.abs(existing.landing.x - route.landing.x) < 280;
         const overlapStart = Math.max(existing.launch.x, route.launch.x);
         const overlapEnd = Math.min(existing.landing.x, route.landing.x);
         const overlap = Math.max(0, overlapEnd - overlapStart);
         const shortest = Math.max(1, Math.min(existing.distance, route.distance));
-        return (launchClose && landingClose) || overlap / shortest > 0.72;
-      });
+        if ((launchClose && landingClose) || overlap / shortest > 0.62) return true;
+      }
+      return false;
     }
 
     coinTooClose(candidate) {
-      const minSquared = this.minimumCoinSpacing * this.minimumCoinSpacing;
-      for (const coin of this.items) {
+      const minimumSquared = this.minimumCoinSpacing * this.minimumCoinSpacing;
+      for (let index = 0; index < this.items.length; index += 1) {
+        const coin = this.items[index];
         if (Math.abs(coin.x - candidate.x) > this.minimumCoinSpacing) continue;
         const dx = coin.x - candidate.x;
         const dy = coin.y - candidate.y;
-        if (dx * dx + dy * dy < minSquared) return true;
+        if (dx * dx + dy * dy < minimumSquared) return true;
       }
       return false;
     }
@@ -114,27 +115,29 @@
     addRoute(route) {
       if (!route || this.routeKeys.has(route.key) || this.routeOverlaps(route)) return false;
       const line = this.routes.buildCoinLine(route, this.terrain, this.world.ball.radius, {
-        spacing: 125,
+        spacing: 160,
         minCount: 5,
-        maxCount: 9,
-        startFraction: 0.12,
-        endFraction: 0.84,
-        verticalEase: 1.5,
+        maxCount: 8,
+        startFraction: 0.14,
+        endFraction: 0.82,
+        verticalEase: 1,
         minimumSpacing: this.minimumCoinSpacing
       });
-      const unique = line.filter(coin => !this.coinTooClose(coin));
-      if (unique.length < 4) return false;
-
+      let added = 0;
+      for (let index = 0; index < line.length && this.items.length < this.maxItems; index += 1) {
+        const coin = line[index];
+        if (this.coinTooClose(coin)) continue;
+        this.items.push({ ...coin, taken: false, phase: index * 0.62 + route.launch.x * 0.0013 });
+        added += 1;
+      }
+      if (added < 4) {
+        this.items.length -= added;
+        return false;
+      }
       this.routeKeys.add(route.key);
       this.routeQueue.push(route);
       this.routeQueue.sort((a, b) => a.launch.x - b.launch.x);
-      this.items.push(...unique.map((coin, index) => ({
-        ...coin,
-        taken: false,
-        phase: index * 0.56 + route.launch.x * 0.0017
-      })));
       this.items.sort((a, b) => a.x - b.x);
-      if (this.items.length > this.maxItems) this.items.length = this.maxItems;
       return true;
     }
 
@@ -144,14 +147,13 @@
       return !furthest || furthest.landing.x < this.world.ball.x + this.prefetchDistance;
     }
 
-    generateOne(initial = false) {
+    generateOne() {
       const seed = this.pendingSeed || this.cloneBall(this.world.ball);
       const route = this.predict(seed);
-      if (!route || route.launch.x <= seed.x + 65) {
-        if (!initial) this.pendingSeed = this.cloneBall(this.world.ball);
+      if (!route || route.launch.x <= seed.x + 75) {
+        this.pendingSeed = this.cloneBall(this.world.ball);
         return false;
       }
-
       this.pendingSeed = this.landingState(route, seed.radius);
       const added = this.addRoute(route);
       this.updateActiveRoute();
@@ -168,31 +170,47 @@
           this.idleHandle = setTimeout(() => {
             this.idleHandle = 0;
             if (token === this.token) this.scheduleMore();
-          }, 180);
+          }, 240);
           return;
         }
-
-        const remaining = typeof deadline?.timeRemaining === 'function' ? deadline.timeRemaining() : 4;
-        if (remaining > 2 || !deadline) this.generateOne(false);
+        const remaining = typeof deadline?.timeRemaining === 'function' ? deadline.timeRemaining() : 3;
+        if (remaining > 2 || !deadline) this.generateOne();
         if (this.needsMore()) this.scheduleMore();
       };
+      if (typeof requestIdleCallback === 'function') this.idleHandle = requestIdleCallback(callback, { timeout: 260 });
+      else this.idleHandle = setTimeout(() => callback(null), 70);
+    }
 
-      if (typeof requestIdleCallback === 'function') {
-        this.idleHandle = requestIdleCallback(callback, { timeout: 180 });
-      } else {
-        this.idleHandle = setTimeout(() => callback(null), 40);
+    compactItems(minX, preserveUntil, keptKeys) {
+      let write = 0;
+      for (let read = 0; read < this.items.length; read += 1) {
+        const coin = this.items[read];
+        if (coin.taken || coin.x <= minX) continue;
+        if (preserveUntil !== undefined && coin.x >= preserveUntil && !keptKeys.has(coin.routeKey)) continue;
+        this.items[write++] = coin;
       }
+      this.items.length = write;
+    }
+
+    compactRoutes(minLandingX, preserveUntil) {
+      let write = 0;
+      this.routeKeys.clear();
+      for (let read = 0; read < this.routeQueue.length; read += 1) {
+        const route = this.routeQueue[read];
+        if (route.landing.x <= minLandingX) continue;
+        if (preserveUntil !== undefined && route.launch.x >= preserveUntil) continue;
+        this.routeQueue[write++] = route;
+        this.routeKeys.add(route.key);
+      }
+      this.routeQueue.length = write;
     }
 
     rebaseFromActualBall(ball) {
       const preserveUntil = ball.x + this.preserveDistance;
-      const keptRoutes = this.routeQueue.filter(route => route.launch.x < preserveUntil);
-      const keptKeys = new Set(keptRoutes.map(route => route.key));
-      this.routeQueue = keptRoutes;
-      this.routeKeys = keptKeys;
-      this.items = this.items.filter(coin => coin.x < preserveUntil || keptKeys.has(coin.routeKey));
-      this.pendingSeed = keptRoutes.length
-        ? this.landingState(keptRoutes[keptRoutes.length - 1], ball.radius)
+      this.compactRoutes(ball.x - 260, preserveUntil);
+      this.compactItems(ball.x - 190, preserveUntil, this.routeKeys);
+      this.pendingSeed = this.routeQueue.length
+        ? this.landingState(this.routeQueue[this.routeQueue.length - 1], ball.radius)
         : this.cloneBall(ball);
       this.lastRebaseX = ball.x;
       this.scheduleMore();
@@ -200,19 +218,22 @@
 
     updateActiveRoute() {
       const x = this.world.ball.x;
-      this.activeRoute = this.routeQueue.find(route => route.landing.x > x - 90) || null;
+      this.activeRoute = null;
+      for (let index = 0; index < this.routeQueue.length; index += 1) {
+        if (this.routeQueue[index].landing.x > x - 90) {
+          this.activeRoute = this.routeQueue[index];
+          break;
+        }
+      }
     }
 
-    maintain() {
+    update() {
       const ball = this.world.ball;
-      this.items = this.items.filter(coin => !coin.taken && coin.x > ball.x - 190);
-      this.routeQueue = this.routeQueue.filter(route => route.landing.x > ball.x - 260);
-      this.routeKeys = new Set(this.routeQueue.map(route => route.key));
-
+      this.compactItems(ball.x - 190, undefined, this.routeKeys);
+      this.compactRoutes(ball.x - 260);
       const landedNow = ball.grounded && !this.wasGrounded;
-      if (landedNow && ball.x - this.lastRebaseX > 300) this.rebaseFromActualBall(ball);
       this.wasGrounded = Boolean(ball.grounded);
-
+      if (landedNow && ball.x - this.lastRebaseX > 320) this.rebaseFromActualBall(ball);
       if (ball.grounded) {
         const furthest = this.routeQueue[this.routeQueue.length - 1];
         if (!furthest) this.pendingSeed = this.cloneBall(ball);
@@ -224,21 +245,12 @@
       this.updateActiveRoute();
     }
 
-    update() {
-      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (now - this.lastMaintenance < 80) {
-        this.wasGrounded = Boolean(this.world.ball.grounded);
-        return;
-      }
-      this.lastMaintenance = now;
-      this.maintain();
-    }
-
     collect() {
       const ball = this.world.ball;
       const radius = ball.radius + 13;
       const radiusSquared = radius * radius;
-      for (const coin of this.items) {
+      for (let index = 0; index < this.items.length; index += 1) {
+        const coin = this.items[index];
         if (coin.taken) continue;
         const dx = coin.x - ball.x;
         if (dx < -90) continue;
@@ -252,12 +264,9 @@
     }
 
     snapshot() {
-      return {
-        routes: this.routeQueue.length,
-        coins: this.items.filter(coin => !coin.taken).length,
-        maxRoutes: this.maxRoutes,
-        maxItems: this.maxItems
-      };
+      let activeCoins = 0;
+      for (let index = 0; index < this.items.length; index += 1) if (!this.items[index].taken) activeCoins += 1;
+      return { routes: this.routeQueue.length, coins: activeCoins, maxRoutes: this.maxRoutes, maxItems: this.maxItems };
     }
   }
 
