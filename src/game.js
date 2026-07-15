@@ -58,6 +58,22 @@
     systemToast: $('toastMessage')
   };
 
+  if (!U.multiplier || !U.speedLabel) {
+    const center = document.createElement('div');
+    center.className = 'hud-center';
+    U.landingToast.parentNode.insertBefore(center, U.landingToast);
+    center.appendChild(U.landingToast);
+    const stunt = document.createElement('div');
+    stunt.className = 'stunt-hud';
+    stunt.innerHTML = '<strong id="multiplierValue">×1.0</strong><span id="speedLabel">CRUISE</span>';
+    center.appendChild(stunt);
+    U.multiplier = stunt.querySelector('strong');
+    U.speedLabel = stunt.querySelector('span');
+    const style = document.createElement('style');
+    style.textContent = '.hud-center{justify-self:center;display:grid;justify-items:center;gap:5px;pointer-events:none}.stunt-hud{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(10,48,58,.62);color:#fff;box-shadow:0 7px 20px rgba(0,45,55,.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.stunt-hud strong{font-size:15px;line-height:1;color:#fff5a8}.stunt-hud span{font-size:8px;font-weight:1000;letter-spacing:.12em}@media (orientation:portrait){.hud-center{position:absolute;left:50%;top:max(68px,calc(env(safe-area-inset-top) + 52px));transform:translateX(-50%)}.hud-center .landing-toast{position:static;transform:translateY(-8px) scale(.96)}.hud-center .landing-toast.show{transform:none}}';
+    document.head.appendChild(style);
+  }
+
   const SKINS = [
     { id: 'aqua', name: 'Aqua', price: 0, color: '#12cbd2', hue: 0, trail: '#c8ffff' },
     { id: 'coral', name: 'Coral', price: 25, color: '#ff6670', hue: 145, trail: '#ffd0d4' },
