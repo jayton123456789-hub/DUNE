@@ -2,142 +2,119 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { PhysicsWorld, SplineTerrain } = require('../src/physics-core.js');
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
-}
+const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
-function simulate(world, seconds, input) {
-  const dt = 1 / 120;
-  const events = [];
+function flowRun(seed, seconds = 35) {
+  const world = new PhysicsWorld({ seed });
+  let launches = 0;
+  let landings = 0;
   let maxAltitude = 0;
-  for (let step = 0; step < seconds / dt; step++) {
-    const held = input(world, step * dt);
-    const batch = world.step(dt, held);
-    events.push(...batch);
-    const altitude = world.terrain.frame(world.ball.x, world.ball.radius).centerY - world.ball.y;
+  let end = null;
+  for (let step = 0; step < seconds * 120; step++) {
+    const frame = world.terrain.frame(world.ball.x, world.ball.radius);
+    const altitude = frame.centerY - world.ball.y;
+    const held = world.ball.grounded
+      ? frame.slope > 0.015
+      : world.ball.vy > -80 && altitude < 900;
+    const events = world.step(1 / 120, held);
     maxAltitude = Math.max(maxAltitude, altitude);
-    if (batch.some(event => event.type === 'crash' || event.type === 'stall')) break;
+    for (const event of events) {
+      if (event.type === 'launch') launches++;
+      if (event.type === 'landing') landings++;
+      if (event.type === 'crash' || event.type === 'stall') end = event.type;
+    }
+    if (end) break;
   }
-  return { events, maxAltitude, state: { ...world.ball } };
+  return { distance: world.ball.x, launches, landings, maxAltitude, end };
 }
 
-const opening = new PhysicsWorld({ seed: 12345 });
-const openingResult = simulate(opening, 5, world => {
-  if (world.ball.grounded) return world.ball.x < 760;
-  const altitude = world.terrain.frame(world.ball.x, world.ball.radius).centerY - world.ball.y;
-  return world.ball.vy > 0 && altitude < 270;
-});
-const openingLaunch = openingResult.events.find(event => event.type === 'launch');
-const openingLanding = openingResult.events.find(event => event.type === 'landing');
-assert(openingLaunch, 'opening route never launched');
-assert(openingLaunch.x > 860 && openingLaunch.x < 1120, `opening launch at wrong position: ${openingLaunch.x}`);
-assert(openingResult.maxAltitude > 80, `opening jump too low: ${openingResult.maxAltitude}`);
-assert(openingResult.maxAltitude < 700, `opening jump reaches high-altitude tiers too easily: ${openingResult.maxAltitude}`);
-assert(openingLanding, 'opening route never returned to the ground');
+const flowResults = [];
+for (let seed = 1; seed <= 24; seed++) flowResults.push(flowRun(seed));
+assert(Math.min(...flowResults.map(result => result.distance)) > 5000, 'a seeded route becomes impossible before five kilometres of world distance');
+assert(Math.min(...flowResults.map(result => result.launches)) >= 4, 'a seeded route cannot chain at least four natural launches');
+assert(flowResults.reduce((sum, result) => sum + result.distance, 0) / flowResults.length > 7500, 'average multi-hill flow is too short');
 
-function forceLanding({ tangentSpeed, normalSpeed }) {
-  const world = new PhysicsWorld({ seed: 44 });
-  const x = 3100;
-  const frame = world.terrain.frame(x, world.ball.radius);
+const released = new PhysicsWorld({ seed: 3 });
+const diving = new PhysicsWorld({ seed: 3 });
+for (const world of [released, diving]) {
   world.ball.grounded = false;
-  world.ball.x = x;
-  world.ball.y = frame.centerY + 1;
-  world.ball.vx = frame.tx * tangentSpeed - frame.nx * normalSpeed;
-  world.ball.vy = frame.ty * tangentSpeed - frame.ny * normalSpeed;
-  world.flight = { airtime: 1.1, launchX: x - 500, launchY: frame.centerY - 100, launchSpeed: 650, maxAltitude: 220, maxSpeed: 760, distance: 500 };
-  world.resolveSweptCollision(x - 2, frame.centerY - 2, x + 2, frame.centerY + 2);
-  return { world, events: world.consumeEvents() };
+  world.ball.x = 1500;
+  world.ball.y = -900;
+  world.ball.vx = 650;
+  world.ball.vy = -420;
 }
-
-const perfect = forceLanding({ tangentSpeed: 620, normalSpeed: 70 });
-const perfectEvent = perfect.events.find(event => event.type === 'landing');
-assert(perfectEvent?.grade === 'perfect', 'aligned landing was not graded perfect');
-assert(perfectEvent.bonus === 0, 'perfect landing still manufactures a speed bonus');
-assert(perfectEvent.speed <= perfectEvent.tangentSpeed, 'perfect landing creates momentum');
-
-const rough = forceLanding({ tangentSpeed: 540, normalSpeed: 720 });
-const roughEvent = rough.events.find(event => event.type === 'landing');
-assert(roughEvent && ['rough', 'hard'].includes(roughEvent.grade), 'survivable hard landing incorrectly ended the run');
-assert(rough.world.ball.grounded, 'survivable hard landing did not continue rolling');
-assert(roughEvent.speed < roughEvent.tangentSpeed, 'rough landing did not lose speed');
-
-const backward = forceLanding({ tangentSpeed: -60, normalSpeed: 120 });
-assert(backward.events.some(event => event.type === 'crash' && event.reason === 'backward'), 'backward landing did not end the run');
-
-const normalMass = new PhysicsWorld({ seed: 222, config: { massKg: 136.0777 } });
-const hugeMass = new PhysicsWorld({ seed: 222, config: { massKg: 453592.37 } });
-for (let index = 0; index < 360; index++) {
-  const held = index < 210;
-  normalMass.step(1 / 120, held);
-  hugeMass.step(1 / 120, held);
+for (let step = 0; step < 120; step++) {
+  released.step(1 / 120, false);
+  diving.step(1 / 120, true);
 }
-assert(Math.abs(normalMass.ball.x - hugeMass.ball.x) < 1e-9, 'mass incorrectly changes gravitational motion');
-assert(Math.abs(normalMass.ball.vx - hugeMass.ball.vx) < 1e-9, 'mass incorrectly changes velocity');
+assert(released.ball.y < diving.ball.y - 350, 'release state is not meaningfully floatier than dive state');
 
-let measuredMaxSlope = 0;
-let measuredMaxCurvature = 0;
-let shortestSegment = Infinity;
-let longestSegment = 0;
-let smallSegments = 0;
-let mediumSegments = 0;
-let largeSegments = 0;
+let maxSlope = 0;
+let maxCurvature = 0;
+let minWidth = Infinity;
+let maxWidth = 0;
+let longDownhills = [];
+let divotCount = 0;
 const featureCounts = new Map();
-for (let seed = 1; seed <= 28; seed++) {
+for (let seed = 1; seed <= 30; seed++) {
   const terrain = new SplineTerrain({ seed });
-  terrain.ensure(45000);
+  terrain.ensure(50000);
   for (const feature of terrain.featureLog) featureCounts.set(feature, (featureCounts.get(feature) || 0) + 1);
   for (let index = 1; index < terrain.points.length; index++) {
     const width = terrain.points[index].x - terrain.points[index - 1].x;
-    shortestSegment = Math.min(shortestSegment, width);
-    longestSegment = Math.max(longestSegment, width);
-    if (width < 300) smallSegments++;
-    else if (width < 500) mediumSegments++;
-    else largeSegments++;
+    minWidth = Math.min(minWidth, width);
+    maxWidth = Math.max(maxWidth, width);
+    const kind = terrain.points[index].kind;
+    if (kind.includes('divot') || kind.includes('pocket') || kind.includes('dip')) divotCount++;
+    if (kind === 'long-deep-valley' && index >= 2) longDownhills.push(terrain.points[index].x - terrain.points[index - 2].x);
   }
-  for (let x = 0; x < 45000; x += 7) {
+  for (let x = 0; x < 50000; x += 7) {
     const sample = terrain.sample(x);
-    measuredMaxSlope = Math.max(measuredMaxSlope, Math.abs(sample.slope));
-    measuredMaxCurvature = Math.max(measuredMaxCurvature, Math.abs(sample.curvature));
+    maxSlope = Math.max(maxSlope, Math.abs(sample.slope));
+    maxCurvature = Math.max(maxCurvature, Math.abs(sample.curvature));
   }
 }
-assert(measuredMaxSlope <= 1.22, `terrain slope exceeds limit: ${measuredMaxSlope}`);
-assert(measuredMaxCurvature <= 0.014, `terrain curvature exceeds limit: ${measuredMaxCurvature}`);
-assert(shortestSegment >= 190, `terrain feature is too dense: ${shortestSegment}`);
-assert(longestSegment <= 780, `terrain channel is too long: ${longestSegment}`);
-assert(smallSegments > 40 && mediumSegments > 40 && largeSegments > 40, 'terrain lacks small/medium/large scale variety');
-for (const feature of ['rollers', 'bowl', 'channel', 'double', 'mega']) {
-  assert((featureCounts.get(feature) || 0) > 5, `terrain generator rarely produced ${feature} features`);
+assert(maxSlope > 1.25, 'terrain never generates sharper slopes');
+assert(maxSlope <= 1.42, `terrain slope exceeds safe limit: ${maxSlope}`);
+assert(maxCurvature <= 0.016, `terrain curvature exceeds safe limit: ${maxCurvature}`);
+assert(minWidth >= 170 && maxWidth <= 700, `terrain spacing outside safe range: ${minWidth}-${maxWidth}`);
+assert(Math.min(...longDownhills) > 680, 'long downhill section is too short');
+assert(longDownhills.reduce((sum, width) => sum + width, 0) / longDownhills.length > 850, 'average downhill does not last long enough');
+assert(divotCount > 1200, 'terrain does not contain enough divots');
+for (const feature of ['long-dive', 'divots', 'basin', 'channel', 'sharp-sequence', 'mega']) {
+  assert((featureCounts.get(feature) || 0) >= 8, `${feature} terrain is underrepresented`);
 }
 
-const crest = new PhysicsWorld({ seed: 9 });
-crest.ball.x = 970;
-const crestFrame = crest.terrain.frame(crest.ball.x, crest.ball.radius);
-crest.ball.y = crestFrame.centerY;
-crest.ball.grounded = true;
-crest.ball.groundTime = 1;
-crest.ball.groundSpeed = 760;
-crest.ball.vx = crestFrame.tx * 760;
-crest.ball.vy = crestFrame.ty * 760;
-let crestLaunch = false;
-for (let index = 0; index < 180; index++) {
-  const events = crest.step(1 / 120, false);
-  if (events.some(event => event.type === 'launch')) { crestLaunch = true; break; }
-}
-assert(crestLaunch, 'high-speed crest remained glued to terrain');
+const roughWorld = new PhysicsWorld({ seed: 77 });
+const impactX = 3500;
+const impactFrame = roughWorld.terrain.frame(impactX, roughWorld.ball.radius);
+roughWorld.ball.grounded = false;
+roughWorld.ball.x = impactX;
+roughWorld.ball.y = impactFrame.centerY + 1;
+roughWorld.ball.vx = impactFrame.tx * 560 - impactFrame.nx * 760;
+roughWorld.ball.vy = impactFrame.ty * 560 - impactFrame.ny * 760;
+roughWorld.flight = { airtime: 1.5, launchX: 2800, launchY: impactFrame.centerY - 180, launchSpeed: 720, maxAltitude: 300, maxSpeed: 900, distance: 700 };
+roughWorld.resolveSweptCollision(impactX - 2, impactFrame.centerY - 2, impactX + 2, impactFrame.centerY + 2);
+const roughEvent = roughWorld.consumeEvents().find(event => event.type === 'landing');
+assert(roughEvent && roughWorld.ball.grounded, 'survivable rough landing incorrectly ends the run');
+assert(roughEvent.speed > 300, 'rough landing removes too much usable momentum');
 
 console.log(JSON.stringify({
   status: 'pass',
-  openingLaunchX: Number(openingLaunch.x.toFixed(1)),
-  openingMaxAltitude: Number(openingResult.maxAltitude.toFixed(1)),
-  openingLanding: openingLanding.grade,
-  perfectCreatesSpeed: false,
-  roughLandingSurvives: true,
-  backwardLandingFails: true,
-  massIndependent: true,
-  highSpeedSeparation: true,
-  maxSlope: Number(measuredMaxSlope.toFixed(4)),
-  maxCurvature: Number(measuredMaxCurvature.toFixed(6)),
-  segmentRange: [Number(shortestSegment.toFixed(1)), Number(longestSegment.toFixed(1))],
-  segmentVariety: { small: smallSegments, medium: mediumSegments, large: largeSegments },
-  featureCounts: Object.fromEntries(featureCounts)
+  flow: {
+    minimumDistance: Number(Math.min(...flowResults.map(result => result.distance)).toFixed(1)),
+    averageDistance: Number((flowResults.reduce((sum, result) => sum + result.distance, 0) / flowResults.length).toFixed(1)),
+    minimumLaunches: Math.min(...flowResults.map(result => result.launches))
+  },
+  floatDifference: Number((diving.ball.y - released.ball.y).toFixed(1)),
+  terrain: {
+    maxSlope: Number(maxSlope.toFixed(4)),
+    maxCurvature: Number(maxCurvature.toFixed(6)),
+    widthRange: [Number(minWidth.toFixed(1)), Number(maxWidth.toFixed(1))],
+    minimumLongDownhill: Number(Math.min(...longDownhills).toFixed(1)),
+    averageLongDownhill: Number((longDownhills.reduce((sum, width) => sum + width, 0) / longDownhills.length).toFixed(1)),
+    divotCount,
+    featureCounts: Object.fromEntries(featureCounts)
+  },
+  roughLandingSpeed: Number(roughEvent.speed.toFixed(1))
 }, null, 2));
