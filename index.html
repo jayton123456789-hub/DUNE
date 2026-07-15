@@ -10,8 +10,9 @@
   <link rel="preload" href="assets/background.svg" as="image" />
   <link rel="preload" href="assets/ball.svg" as="image" />
   <link rel="preload" href="assets/coin.svg" as="image" />
-  <link rel="stylesheet" href="styles.css?v=13.2" />
-  <link rel="stylesheet" href="intro-stability.css?v=13.2" />
+  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="intro-stability.css?v=14" />
+  <link rel="stylesheet" href="v14-performance.css?v=14" />
   <title>Driftline</title>
 </head>
 <body>
@@ -83,8 +84,8 @@
           <header class="panel-header"><button class="back-button" type="button" data-open-view="main">‹</button><div><p>ENVIRONMENTS</p><h2>WORLDS</h2></div><div class="header-spacer"></div></header>
           <div class="world-grid">
             <article class="world-card selected"><div class="world-preview desert"></div><small>EQUIPPED</small><h3>Dry Dunes</h3><p>Golden sand, turquoise sky, classic scoring line.</p></article>
-            <article class="world-card locked"><div class="world-preview sunset"></div><small>V14 COLLECTION</small><h3>Solar Sunset</h3><p>Full world sets arrive with progression.</p></article>
-            <article class="world-card locked"><div class="world-preview lunar"></div><small>V14 COLLECTION</small><h3>Lunar Dust</h3><p>World overlays remain cosmetic and preserve physics.</p></article>
+            <article class="world-card locked"><div class="world-preview sunset"></div><small>COLLECTION PREVIEW</small><h3>Solar Sunset</h3><p>A future full-world cosmetic set.</p></article>
+            <article class="world-card locked"><div class="world-preview lunar"></div><small>COLLECTION PREVIEW</small><h3>Lunar Dust</h3><p>World overlays remain cosmetic and preserve physics.</p></article>
           </div>
         </div>
       </section>
@@ -93,11 +94,11 @@
         <div class="menu-panel">
           <header class="panel-header"><button class="back-button" type="button" data-open-view="main">‹</button><div><p>MASTERY</p><h2>CHALLENGES</h2></div><div class="header-spacer"></div></header>
           <div class="challenge-preview-list">
-            <article><span>01</span><div><h3>Line Runner</h3><p>Cross the score line three times in one run.</p></div><b>V14</b></article>
-            <article><span>02</span><div><h3>Clean Sweep</h3><p>Collect an entire predictive coin route.</p></div><b>V14</b></article>
-            <article><span>03</span><div><h3>Butter Chain</h3><p>Bank three smooth landings consecutively.</p></div><b>V14</b></article>
+            <article><span>01</span><div><h3>Line Runner</h3><p>Cross the score line three times in one run.</p></div><b>PREVIEW</b></article>
+            <article><span>02</span><div><h3>Clean Sweep</h3><p>Collect an entire predictive coin route.</p></div><b>PREVIEW</b></article>
+            <article><span>03</span><div><h3>Butter Chain</h3><p>Bank three smooth landings consecutively.</p></div><b>PREVIEW</b></article>
           </div>
-          <div class="coming-card"><strong>Exclusive rewards are next.</strong><p>Challenge-only balls, trails, score lines, and achievement badges will arrive in the combined progression update.</p></div>
+          <div class="coming-card"><strong>Performance-first v14.</strong><p>This build focuses on smooth play, stable iPhone rendering, and fair predictive coin paths before expanding progression.</p></div>
         </div>
       </section>
 
@@ -156,17 +157,18 @@
     <div id="toastMessage" class="system-toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script defer src="src/physics-core.js?v=13.2"></script>
-  <script defer src="src/coin-route.js?v=13.2"></script>
-  <script defer src="src/sand-effects.js?v=13.2"></script>
-  <script defer src="src/smart-coins.js?v=13.2"></script>
-  <script defer src="src/score-system.js?v=13.2"></script>
-  <script defer src="src/autopilot.js?v=13.2"></script>
-  <script defer src="src/game-ui.js?v=13.2"></script>
-  <script defer src="src/audio-guard.js?v=13.2"></script>
-  <script defer src="src/sand-renderer.js?v=13.2"></script>
-  <script defer src="src/intro-cinematic.js?v=13.2"></script>
-  <script defer src="src/stable-main.js?v=13.2"></script>
-  <script defer src="src/sw-register.js?v=13.2"></script>
+  <script defer src="src/physics-core.js?v=14"></script>
+  <script defer src="src/v14-route.js?v=14"></script>
+  <script defer src="src/sand-effects.js?v=14"></script>
+  <script defer src="src/v14-coins.js?v=14"></script>
+  <script defer src="src/score-system.js?v=14"></script>
+  <script defer src="src/autopilot.js?v=14"></script>
+  <script defer src="src/game-ui.js?v=14"></script>
+  <script defer src="src/audio-guard.js?v=14"></script>
+  <script defer src="src/sand-renderer.js?v=14"></script>
+  <script defer src="src/v14-performance.js?v=14"></script>
+  <script defer src="src/intro-cinematic.js?v=14"></script>
+  <script defer src="src/stable-main.js?v=14"></script>
+  <script defer src="src/sw-register.js?v=14"></script>
 </body>
 </html>
