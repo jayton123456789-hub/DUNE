@@ -1,36 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Driftline arcade game icon</title>
-  <desc id="desc">A bright white ball flying over a smooth blue dune under a warm sunset sky.</desc>
+  <title id="title">Driftline game icon</title>
+  <desc id="desc">A pearl ball sails over layered honey-gold dunes in a turquoise paper-cut desert.</desc>
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ff8f70"/>
-      <stop offset="0.55" stop-color="#ffc56f"/>
-      <stop offset="1" stop-color="#fff2c4"/>
+      <stop offset="0" stop-color="#08aebb"/>
+      <stop offset="0.55" stop-color="#7cddce"/>
+      <stop offset="1" stop-color="#ffe8a9"/>
     </linearGradient>
-    <linearGradient id="dune" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1876d2"/>
-      <stop offset="1" stop-color="#0b3f8a"/>
-    </linearGradient>
-    <radialGradient id="ball" cx="35%" cy="28%" r="70%">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.55" stop-color="#e8f7ff"/>
-      <stop offset="1" stop-color="#8fd7ff"/>
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fffbd2" stop-opacity="0.98"/>
+      <stop offset="0.45" stop-color="#fff0a2" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#fff0a2" stop-opacity="0"/>
     </radialGradient>
-    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#07356c" flood-opacity="0.28"/>
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe28a"/>
+      <stop offset="0.5" stop-color="#efb654"/>
+      <stop offset="1" stop-color="#b96338"/>
+    </linearGradient>
+    <radialGradient id="ballShell" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.72" stop-color="#f4ffff"/>
+      <stop offset="1" stop-color="#b8cecf"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#77f4ed"/>
+      <stop offset="1" stop-color="#078194"/>
+    </linearGradient>
+    <clipPath id="iconBallClip">
+      <circle cx="208" cy="208" r="66"/>
+    </clipPath>
+    <filter id="lift" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#073944" flood-opacity="0.33"/>
     </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#sky)"/>
-  <circle cx="392" cy="112" r="46" fill="#fff8d7" opacity="0.9"/>
-  <path d="M-30 375C75 238 168 462 286 320C376 212 447 285 550 180V550H-30Z" fill="url(#dune)"/>
-  <path d="M-20 407C98 299 181 466 303 352C393 268 456 316 538 250" fill="none" stroke="#5ec8ff" stroke-width="18" stroke-linecap="round" opacity="0.7"/>
-  <g filter="url(#shadow)">
-    <circle cx="246" cy="222" r="62" fill="url(#ball)" stroke="#ffffff" stroke-width="10"/>
-    <path d="M209 222H283M246 185V259" stroke="#6abff0" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="394" cy="115" r="96" fill="url(#sunGlow)"/>
+  <circle cx="394" cy="115" r="38" fill="#fff7bd"/>
+
+  <path d="M-36 325C55 249 122 259 196 307C275 358 344 348 548 200V512H-36Z" fill="#63c9b9"/>
+  <path d="M-42 371C59 285 130 307 199 351C276 400 353 374 547 248V512H-42Z" fill="#2ca9a4"/>
+  <path d="M-34 407C58 332 130 337 204 387C292 447 359 410 548 297V548H-34Z" fill="url(#sand)" stroke="#fff0b1" stroke-width="11" stroke-linejoin="round"/>
+  <path d="M-2 449C80 388 143 391 210 432C294 484 373 445 520 356" fill="none" stroke="#d68b45" stroke-width="13" stroke-linecap="round" opacity="0.76"/>
+
+  <g fill="#ffc62d" stroke="#fff5ae" stroke-width="5">
+    <circle cx="321" cy="207" r="17"/>
+    <circle cx="364" cy="183" r="15"/>
+    <circle cx="404" cy="168" r="13"/>
   </g>
-  <g fill="#ffd44d" stroke="#ffffff" stroke-width="6">
-    <circle cx="342" cy="205" r="18"/>
-    <circle cx="384" cy="181" r="16"/>
-    <circle cx="422" cy="169" r="14"/>
+
+  <g filter="url(#lift)">
+    <circle cx="208" cy="208" r="70" fill="url(#ballShell)" stroke="#ffffff" stroke-width="7"/>
+    <g clip-path="url(#iconBallClip)" fill="url(#mark)">
+      <path d="M208 200C221 184 230 165 224 146C242 156 252 171 250 187C247 205 229 216 211 216C202 216 198 209 208 200Z"/>
+      <path d="M208 200C221 184 230 165 224 146C242 156 252 171 250 187C247 205 229 216 211 216C202 216 198 209 208 200Z" transform="rotate(120 208 208)"/>
+      <path d="M208 200C221 184 230 165 224 146C242 156 252 171 250 187C247 205 229 216 211 216C202 216 198 209 208 200Z" transform="rotate(240 208 208)"/>
+    </g>
+    <circle cx="208" cy="208" r="8" fill="#ffffff" stroke="#087c91" stroke-width="5"/>
   </g>
+
+  <rect x="16" y="16" width="480" height="480" rx="94" fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="7"/>
 </svg>

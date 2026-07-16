@@ -1,8 +1,8 @@
-(function attachV14Routes(root, factory) {
+(function attachCoinRoutes(root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.DriftCoinRoutes = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function createV14Routes() {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createCoinRoutes() {
   'use strict';
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -64,11 +64,17 @@
       const extraGravity = held ? (config.groundDiveExtraGravity ?? 0) : 0;
       const totalGravity = baseGravity + extraGravity;
       const normalForcePerMass = -speed * speed * frame.curvature - totalGravity * frame.ny;
-      const crestFacing = frame.slope < 0.11 && frame.slope > -1.08 && frame.curvature > 0;
+      // Keep this launch gate byte-for-byte equivalent in meaning to
+      // PhysicsWorld.stepGround. A looser predictor can draw a coin arc for a
+      // crest the real ball never leaves, which is far worse than omitting an
+      // uncertain route.
+      const crestFacing = frame.slope < 0.14
+        && frame.slope > -1.05
+        && frame.curvature > 0.00008;
       const canDetach = crestFacing
-        && normalForcePerMass < -(config.detachForceMargin ?? 42)
-        && ball.groundTime >= (config.minGroundContact ?? 0.075)
-        && speed > 115;
+        && normalForcePerMass < -(config.detachForceMargin ?? 34)
+        && ball.groundTime >= (config.minGroundContact ?? 0.065)
+        && speed > 105;
 
       if (canDetach) {
         return {
@@ -195,11 +201,14 @@
 
   function predictReleaseRoute(terrain, config, ball, customOptions = {}) {
     const options = {
-      dt: customOptions.dt ?? 1 / 90,
+      // Prediction uses the same fixed step as the live simulation. At 1/75,
+      // marginal detach windows could be crossed on a different frame and
+      // move a later launch by an entire dune.
+      dt: customOptions.dt ?? 1 / 120,
       maxGroundSeconds: customOptions.maxGroundSeconds ?? 7.5,
       maxAirSeconds: customOptions.maxAirSeconds ?? 7,
-      groundSampleEvery: customOptions.groundSampleEvery ?? 14,
-      airSampleEvery: customOptions.airSampleEvery ?? 3,
+      groundSampleEvery: customOptions.groundSampleEvery ?? 26,
+      airSampleEvery: customOptions.airSampleEvery ?? 6,
       minAirtime: customOptions.minAirtime ?? 0.3,
       minDistance: customOptions.minDistance ?? 150,
       minAltitude: customOptions.minAltitude ?? 16

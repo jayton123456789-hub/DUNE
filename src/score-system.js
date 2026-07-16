@@ -8,21 +8,23 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
   const DEFAULT_CONFIG = Object.freeze({
-    lineY: 110,
-    lineGrace: 8,
-    minimumFlightTime: 0.2,
+    lineY: 180,
+    lineGrace: 10,
+    minimumFlightTime: 0.16,
+    metersPerTravelPoint: 7,
     tiers: [
-      { height: 0, rate: 7, label: 'ABOVE THE LINE' },
-      { height: 80, rate: 11, label: 'HIGH AIR' },
-      { height: 190, rate: 17, label: 'SKY RUN' },
-      { height: 340, rate: 25, label: 'STRATOSPHERE' },
-      { height: 620, rate: 36, label: 'ORBITAL' }
+      { height: 0, rate: 9, label: 'ABOVE THE LINE' },
+      { height: 80, rate: 14, label: 'HIGH AIR' },
+      { height: 190, rate: 21, label: 'SKY RUN' },
+      { height: 340, rate: 31, label: 'STRATOSPHERE' },
+      { height: 620, rate: 44, label: 'ORBITAL' }
     ],
     landingBank: {
       perfect: 1,
       good: 0.9,
       rough: 0.58,
-      hard: 0.28
+      hard: 0.32,
+      recovery: 0.45
     },
     maxMultiplier: 4,
     multiplierStep: 0.5
@@ -41,6 +43,7 @@
 
     resetRun() {
       this.score = 0;
+      this.travelScore = 0;
       this.pendingRaw = 0;
       this.pendingDisplay = 0;
       this.chain = 0;
@@ -53,6 +56,18 @@
       this.lostThisRun = 0;
       this.bankedThisRun = 0;
       this.events = [];
+    }
+
+    updateDistance(distanceMeters) {
+      const target = Math.max(0, Math.floor(distanceMeters / this.config.metersPerTravelPoint));
+      if (target <= this.travelScore) return this.consumeEvents();
+      const gained = target - this.travelScore;
+      this.travelScore = target;
+      this.score += gained;
+      if (target > 0 && target % 25 === 0) {
+        this.events.push({ type: 'distance-milestone', points: target, distance: distanceMeters });
+      }
+      return this.consumeEvents();
     }
 
     beginFlight() {
@@ -117,8 +132,11 @@
       const banked = Math.floor(pendingBeforeBank * ratio);
       const lost = pendingBeforeBank - banked;
 
-      if (grade === 'perfect' && this.flightCrossed) this.chain += 1;
-      else if (grade === 'good' && this.flightCrossed) this.chain = Math.max(0, this.chain - 1);
+      // Landing mastery is about carrying clean momentum from curve to curve.
+      // A perfect low arc still counts; requiring every hop to cross the score
+      // line made the visible x3 challenge unreachable in normal play.
+      if (grade === 'perfect') this.chain += 1;
+      else if (grade === 'good') this.chain = Math.max(0, this.chain - 1);
       else this.chain = 0;
 
       this.multiplier = clamp(
@@ -182,7 +200,8 @@
         maxTier: this.maxTier,
         lineY: this.config.lineY,
         banked: this.bankedThisRun,
-        lost: this.lostThisRun
+        lost: this.lostThisRun,
+        travel: this.travelScore
       };
     }
   }

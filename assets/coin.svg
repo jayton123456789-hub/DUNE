@@ -1,20 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gold crown coin">
-<defs>
-  <radialGradient id="gold" cx="35%" cy="25%" r="82%"><stop offset="0" stop-color="#fff978"/><stop offset=".28" stop-color="#ffd72b"/><stop offset=".7" stop-color="#ffad00"/><stop offset="1" stop-color="#c96a00"/></radialGradient>
-  <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff67c"/><stop offset=".35" stop-color="#ffc10a"/><stop offset=".72" stop-color="#e47c00"/><stop offset="1" stop-color="#9b4300"/></linearGradient>
-  <linearGradient id="crown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff766"/><stop offset=".5" stop-color="#ffd21b"/><stop offset="1" stop-color="#f39b00"/></linearGradient>
-  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="11" flood-color="#6c3700" flood-opacity=".32"/></filter>
-  <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
-</defs>
-<g filter="url(#shadow)">
-  <circle cx="256" cy="256" r="232" fill="url(#rim)" stroke="#9d4d00" stroke-width="8"/>
-  <circle cx="256" cy="256" r="205" fill="url(#gold)" stroke="#fff36d" stroke-width="7"/>
-  <circle cx="256" cy="256" r="165" fill="#f5a600" stroke="#9f4a00" stroke-width="13"/>
-  <circle cx="256" cy="256" r="149" fill="url(#gold)" stroke="#ffd83b" stroke-width="5"/>
-  <path d="M147 312l-22-126 73 57 58-113 58 113 73-57-22 126c-2 13-12 23-25 26-55 13-113 13-168 0-13-3-23-13-25-26z" fill="url(#crown)" stroke="#a85000" stroke-width="12" stroke-linejoin="round"/>
-  <path d="M157 303c65 15 133 15 198 0" fill="none" stroke="#fff074" stroke-width="8" stroke-linecap="round" opacity=".72"/>
-  <path d="M181 221c16 18 28 43 30 70M331 221c-16 18-28 43-30 70" fill="none" stroke="#fff987" stroke-width="7" stroke-linecap="round" opacity=".58"/>
-  <ellipse cx="181" cy="142" rx="67" ry="27" fill="#fff" opacity=".24" transform="rotate(-24 181 142)" filter="url(#soft)"/>
-  <path d="M96 107l13 29 29 13-29 13-13 29-13-29-29-13 29-13z" fill="#fff" opacity=".95"/>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Driftline coin</title>
+  <desc id="desc">A centered honey-gold arcade coin stamped with the Driftline horizon mark.</desc>
+  <defs>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff38a"/>
+      <stop offset="0.42" stop-color="#ffc62d"/>
+      <stop offset="1" stop-color="#d77900"/>
+    </linearGradient>
+    <radialGradient id="face" cx="40%" cy="34%" r="72%">
+      <stop offset="0" stop-color="#ffe778"/>
+      <stop offset="0.58" stop-color="#ffbd25"/>
+      <stop offset="1" stop-color="#e89109"/>
+    </radialGradient>
+    <filter id="coinShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#6a3600" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#coinShadow)">
+    <circle cx="128" cy="128" r="108" fill="url(#rim)" stroke="#9d5000" stroke-width="7"/>
+    <circle cx="128" cy="128" r="85" fill="url(#face)" stroke="#fff18a" stroke-width="6"/>
+    <circle cx="128" cy="128" r="69" fill="none" stroke="#b96800" stroke-opacity="0.58" stroke-width="5"/>
+    <path d="M78 128C94 96 111 80 128 80C145 80 162 96 178 128C162 160 145 176 128 176C111 176 94 160 78 128Z" fill="#fff3a5"/>
+    <path d="M87 128C105 116 119 110 128 110C137 110 151 116 169 128C151 140 137 146 128 146C119 146 105 140 87 128Z" fill="#f19c0a"/>
+    <circle cx="128" cy="128" r="10" fill="#fff7c4"/>
+    <path d="M73 83C88 65 106 55 128 53" fill="none" stroke="#fffbd0" stroke-width="8" stroke-linecap="round" opacity="0.82"/>
+  </g>
 </svg>

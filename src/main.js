@@ -1,38 +1,611 @@
-(()=>{'use strict';
-const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false});
-const UI={hud:$('hud'),score:$('scoreValue'),runCoins:$('runCoins'),toast:$('landingToast'),start:$('startScreen'),over:$('gameOverScreen'),best:$('bestScore'),total:$('totalCoins'),play:$('playButton'),retry:$('retryButton'),menu:$('menuButton'),title:$('gameOverTitle'),reason:$('gameOverReason'),final:$('finalScore'),finalBest:$('finalBest'),finalCoins:$('finalCoins'),pause:$('pauseButton'),pauseOverlay:$('pauseOverlay'),resume:$('resumeButton')};
-const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t,smooth=t=>t*t*(3-2*t);
-const saveKey='driftline-save-v4';let save={best:0,coins:0};try{save={...save,...JSON.parse(localStorage.getItem(saveKey)||'{}')}}catch{}const persist=()=>localStorage.setItem(saveKey,JSON.stringify(save));
-let W=1,H=1,D=1;function resize(){W=innerWidth;H=innerHeight;D=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(D,0,0,D,0,0)}addEventListener('resize',resize,{passive:true});resize();
-const images={};for(const [k,src] of Object.entries({ball:'assets/ball.svg',coin:'assets/coin.svg',bg:'assets/background.svg'})){const im=new Image;im.src=src;images[k]=im}
-class Sfx{unlock(){if(this.c)return;const A=window.AudioContext||window.webkitAudioContext;if(!A)return;this.c=new A;this.g=this.c.createGain();this.g.gain.value=.14;this.g.connect(this.c.destination)}tone(a,b,d=.08,t='sine'){this.unlock();if(!this.c)return;const n=this.c.currentTime,o=this.c.createOscillator(),g=this.c.createGain();o.type=t;o.frequency.setValueAtTime(a,n);o.frequency.exponentialRampToValueAtTime(Math.max(40,b),n+d);g.gain.setValueAtTime(.001,n);g.gain.exponentialRampToValueAtTime(.12,n+.01);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(this.g);o.start(n);o.stop(n+d+.02)}}const sfx=new Sfx;
-function introGround(px){const pts=[[0,.34],[170,.31],[520,.82],[850,.47],[1120,.72],[1350,.58]];for(let i=0;i<pts.length-1;i++){const [x0,y0]=pts[i],[x1,y1]=pts[i+1];if(px<=x1){const t=smooth(clamp((px-x0)/(x1-x0),0,1));return H*lerp(y0,y1,t)}}return H*.58}
-function endlessGround(px){const q=clamp((px-1200)/18000,0,1);return H*.66+Math.sin(px/330)*(56+25*q)+Math.sin(px/155+1.1)*(21+15*q)+Math.sin(px/74+.4)*(5+4*q)}
-function ground(px){if(px<1250)return introGround(px);if(px<1500){const t=smooth((px-1250)/250);return lerp(introGround(px),endlessGround(px),t)}return endlessGround(px)}
-function slope(px){const e=1.5;return(ground(px+e)-ground(px-e))/(e*2)}
-class Coins{constructor(){this.a=[];this.next=700}reset(){this.a=[];this.next=700;this.ensure(2600)}ensure(to){while(this.next<to){const s=this.next,n=6+Math.floor((s/800)%4),sp=39,h=72+24*Math.sin(s/410);for(let i=0;i<n;i++){const u=i/(n-1),px=s+i*sp;this.a.push({x:px,y:ground(px)-50-Math.sin(Math.PI*u)*h,got:false,p:Math.random()*TAU})}this.next+=n*sp+260}}}
-class Particles{constructor(){this.a=[]}clear(){this.a=[]}burst(x,y,c,n=10,s=130){for(let i=0;i<n;i++){const a=Math.random()*TAU,v=s*(.5+Math.random()*.7);this.a.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.5,m:.5,r:2+Math.random()*3,c})}}update(dt){for(let i=this.a.length-1;i>=0;i--){const p=this.a[i];p.l-=dt;if(p.l<=0){this.a.splice(i,1);continue}p.vy+=260*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}}}
-const coins=new Coins,parts=new Particles;
-const G={state:'menu',held:false,score:0,runCoins:0,cam:0,shake:0,toast:0,stall:0,last:performance.now(),acc:0,step:1/120,p:{x:120,y:0,vx:300,vy:0,r:20,vr:23,on:true,rot:0,air:0}};
-function screens(s){UI.start.classList.toggle('active',s==='menu');UI.over.classList.toggle('active',s==='gameover');UI.hud.classList.toggle('active',s==='playing'||s==='paused');UI.pause.style.display=s==='playing'?'block':'none';if(s!=='paused'){UI.pauseOverlay.classList.remove('active');UI.pauseOverlay.setAttribute('aria-hidden','true')}}
-function menuStats(){UI.best.textContent=Math.floor(save.best)+' m';UI.total.textContent=save.coins}
-function reset(){const p=G.p;p.x=120;p.y=ground(p.x)-p.r;p.vx=300;p.vy=slope(p.x)*p.vx;p.on=true;p.rot=0;p.air=0;Object.assign(G,{score:0,runCoins:0,cam:0,shake:0,toast:0,stall:0,held:false,acc:0});coins.reset();parts.clear();UI.score.textContent='0 m';UI.runCoins.textContent='0';UI.toast.classList.remove('show')}
-function start(){sfx.unlock();sfx.tone(500,720,.06,'triangle');reset();G.state='playing';screens('playing')}
-function showMenu(){G.state='menu';G.held=false;screens('menu');menuStats()}
-function fail(t,r){if(G.state!=='playing')return;G.state='gameover';G.held=false;G.shake=10;parts.burst(G.p.x,G.p.y,'#ff5c62',18,180);sfx.tone(120,55,.22,'sawtooth');const d=Math.floor(G.score);save.best=Math.max(save.best,d);save.coins+=G.runCoins;persist();UI.title.textContent=t;UI.reason.textContent=r;UI.final.textContent=d+' m';UI.finalBest.textContent=Math.floor(save.best)+' m';UI.finalCoins.textContent=G.runCoins;setTimeout(()=>screens('gameover'),180)}
-function toast(t,c='#fff'){UI.toast.textContent=t;UI.toast.style.color=c;UI.toast.classList.add('show');G.toast=.65}
-function pause(){if(G.state!=='playing')return;G.state='paused';G.held=false;UI.pauseOverlay.classList.add('active');UI.pauseOverlay.setAttribute('aria-hidden','false');screens('paused')}
-function resume(){if(G.state!=='paused')return;G.state='playing';G.last=performance.now();screens('playing')}
-function collect(){const p=G.p;coins.ensure(p.x+W*2);for(const q of coins.a){if(q.got)continue;const dx=q.x-p.x;if(dx<-80)continue;if(dx>100)break;const dy=q.y-p.y;if(dx*dx+dy*dy<32*32){q.got=true;G.runCoins++;UI.runCoins.textContent=G.runCoins;parts.burst(q.x,q.y,'#ffd33d',9,110);sfx.tone(850,1250,.08)}}}
-function land(a,sp,impact){const p=G.p,v=Math.atan2(p.vy,p.vx);let d=Math.abs(v-a);while(d>Math.PI)d-=TAU;d=Math.abs(d);if(impact>430||d>.72){fail('Hard landing','Match the slope before touching down.');return false}if(d<.2&&impact<280){p.vx=Math.max(250,sp*1.08);toast('PERFECT','#fff5a8');parts.burst(p.x,p.y+p.r,'#fff',12,100);sfx.tone(520,820,.12,'triangle')}else{p.vx=Math.max(220,sp*.96);toast('GOOD');sfx.tone(360,500,.08,'triangle')}return true}
-function update(dt){const p=G.p;if(p.on){const s=slope(p.x),a=Math.atan2(s,1),tx=Math.cos(a),ty=Math.sin(a);let sp=Math.hypot(p.vx,p.vy);sp+=(1050*ty+(G.held?Math.max(0,ty)*560:0)-(8+sp*.002))*dt;const launch=!G.held&&s<-.1&&sp>220,crest=s<-.06&&slope(p.x+20)>s+.1;p.vx=tx*sp;p.vy=ty*sp;p.x+=p.vx*dt;p.y=ground(p.x)-p.r;p.rot+=sp/p.r*dt;if((launch||crest)&&ground(p.x+10)-p.r>p.y+p.vy*dt+1){p.on=false;p.air=0;p.vy-=launch?55:24;sfx.tone(220,430,.1,'triangle')}if(p.x>1450&&s<-.08&&sp<82)G.stall+=dt;else G.stall=Math.max(0,G.stall-dt*2);if(p.vx<=0||sp<2){fail('Momentum lost','Carry more speed into the climb.');return}if(G.stall>.2){fail('Stalled','Dive deeper before the next climb.');return}}else{p.air+=dt;p.vy+=(G.held?1260:760)*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=p.vx/p.r*dt;const gy=ground(p.x)-p.r;if(p.y>=gy){const a=Math.atan2(slope(p.x),1),tx=Math.cos(a),ty=Math.sin(a),sp=Math.max(0,p.vx*tx+p.vy*ty),impact=Math.abs(-p.vx*ty+p.vy*tx);p.y=gy;p.on=true;if(!land(a,sp,impact))return;p.vy=slope(p.x)*p.vx;p.air=0}if(p.vx<=0){fail('Moving backward','Keep forward momentum at all times.');return}}collect();G.score=Math.max(G.score,(p.x-120)/10);UI.score.textContent=Math.floor(G.score)+' m';G.cam=lerp(G.cam,p.x-W*.27,1-Math.pow(.001,dt));if(G.toast>0&&(G.toast-=dt)<=0)UI.toast.classList.remove('show');parts.update(dt)}
-function drawBackground(){if(images.bg.complete&&images.bg.naturalWidth){const h=H,w=h*2.9,off=-((G.cam*.08)%w);for(let x=off-w;x<W+w;x+=w)ctx.drawImage(images.bg,x,0,w,h)}else{const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#08c8cb');g.addColorStop(1,'#d9f4c7');ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}}
-function drawTerrain(){ctx.beginPath();ctx.moveTo(0,H+30);for(let sx=-8;sx<=W+8;sx+=8)ctx.lineTo(sx,ground(G.cam+sx));ctx.lineTo(W+8,H+30);ctx.closePath();const g=ctx.createLinearGradient(0,H*.45,0,H);g.addColorStop(0,'rgba(56,190,180,.9)');g.addColorStop(1,'#168f95');ctx.fillStyle=g;ctx.fill();ctx.beginPath();for(let sx=-8;sx<=W+8;sx+=8){const y=ground(G.cam+sx);sx===-8?ctx.moveTo(sx,y):ctx.lineTo(sx,y)}ctx.strokeStyle='rgba(220,255,245,.72)';ctx.lineWidth=4;ctx.stroke()}
-function drawCoins(){const t=performance.now()*.004;for(const q of coins.a){if(q.got)continue;const sx=q.x-G.cam;if(sx<-40||sx>W+40)continue;const y=q.y+Math.sin(t+q.p)*2.5,sz=29;if(images.coin.complete&&images.coin.naturalWidth)ctx.drawImage(images.coin,sx-sz,y-sz,sz*2,sz*2);else{ctx.fillStyle='#ffd33d';ctx.beginPath();ctx.arc(sx,y,12,0,TAU);ctx.fill()}}}
-function drawParts(){for(const p of parts.a){ctx.globalAlpha=clamp(p.l/p.m,0,1);ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x-G.cam,p.y,p.r,0,TAU);ctx.fill()}ctx.globalAlpha=1}
-function drawBall(){const p=G.p,sx=p.x-G.cam,sz=p.vr*2;ctx.save();ctx.translate(sx,p.y);ctx.rotate(p.rot);ctx.shadowColor='rgba(0,80,90,.28)';ctx.shadowBlur=12;if(images.ball.complete&&images.ball.naturalWidth)ctx.drawImage(images.ball,-sz/2,-sz/2,sz,sz);else{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,p.r,0,TAU);ctx.fill()}ctx.restore()}
-function draw(){drawBackground();const sx=G.shake?(Math.random()-.5)*G.shake:0,sy=G.shake?(Math.random()-.5)*G.shake:0;G.shake*=.88;ctx.save();ctx.translate(sx,sy);drawTerrain();drawCoins();drawParts();drawBall();ctx.restore()}
-function loop(n){const dt=Math.min(.05,Math.max(0,(n-G.last)/1000));G.last=n;if(G.state==='playing'){G.acc+=dt;while(G.acc>=G.step){update(G.step);G.acc-=G.step;if(G.state!=='playing')break}}else parts.update(dt);draw();requestAnimationFrame(loop)}
-const down=e=>{if(G.state==='playing'){G.held=true;sfx.unlock();e.preventDefault()}},up=e=>{G.held=false;e?.preventDefault?.()};canvas.addEventListener('pointerdown',down,{passive:false});addEventListener('pointerup',up,{passive:false});addEventListener('pointercancel',up,{passive:false});addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(G.state==='menu'||G.state==='gameover')start();else if(G.state==='playing')G.held=true}if(e.code==='Escape'){G.state==='playing'?pause():G.state==='paused'&&resume()}});addEventListener('keyup',e=>{if(e.code==='Space')G.held=false});
-UI.play.addEventListener('click',start);UI.retry.addEventListener('click',start);UI.menu.addEventListener('click',showMenu);UI.pause.addEventListener('click',pause);UI.resume.addEventListener('click',resume);menuStats();reset();screens('menu');requestAnimationFrame(n=>{G.last=n;requestAnimationFrame(loop)});
-})();
+(function startDriftline(root) {
+  'use strict';
+
+  const REQUIRED = ['DriftPhysics', 'DriftCoinRoutes', 'DriftSmartCoins', 'DriftScore', 'DriftAutopilot', 'DriftSand', 'DriftArt', 'DriftGameUI', 'DriftSandRenderer', 'DriftIntro'];
+  const missing = REQUIRED.filter(name => !root[name]);
+  if (missing.length) throw new Error(`Driftline could not start: missing ${missing.join(', ')}`);
+
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const lerp = (a, b, amount) => a + (b - a) * amount;
+  const follow = (current, target, speed, dt) => lerp(current, target, 1 - Math.exp(-speed * dt));
+  const START_X = 120;
+  const METERS_PER_WORLD_UNIT = 0.1;
+  const FIXED_STEP = 1 / 120;
+  const MAX_FRAME = 0.05;
+
+  const canvas = document.getElementById('game');
+  const worldFade = document.getElementById('worldFade');
+  const ui = root.DriftGameUI.create();
+  const terrain = new root.DriftPhysics.SplineTerrain({ seed: 0x51f15e });
+  const world = new root.DriftPhysics.PhysicsWorld({ terrain });
+  const score = new root.DriftScore.ScoreSystem();
+  const camera = { x: 0, y: 0, zoom: 0.94, spaceBlend: 0 };
+  const sand = new root.DriftSand.SandSystem(terrain, world, () => ui.save.settings.motion);
+
+  const game = {
+    mode: 'boot',
+    held: false,
+    pointerId: null,
+    accumulator: 0,
+    lastTime: performance.now(),
+    runCoins: 0,
+    distance: 0,
+    runSeed: 0x51f15e,
+    endTimer: 0,
+    audioClock: 0,
+    tutorialStage: -1,
+    demoResetClock: 0,
+    metrics: null
+  };
+
+  function newMetrics() {
+    return {
+      maxAltitude: 0,
+      longestAir: 0,
+      maxSpeed: 0,
+      bestMultiplier: 1,
+      lineCrossings: 0,
+      perfects: 0,
+      smoothLandings: 0,
+      bankedFlow: 0,
+      bestBank: 0,
+      recoveries: 0,
+      launches: 0,
+      landings: 0
+    };
+  }
+
+  const coins = new root.DriftSmartCoins.SmartCoinField({
+    world,
+    terrain,
+    routes: root.DriftCoinRoutes,
+    onCollect: coin => {
+      if (game.mode !== 'playing') return;
+      game.runCoins += 1;
+      sand.collect(coin, ui.selectedSkin().burst);
+      ui.audio.coin();
+      if (game.runCoins === 1) ui.quip('ROUTE FOUND  +1 COIN', '#fff1a3', 760);
+      else if (game.runCoins % 5 === 0) ui.quip(`${game.runCoins} COINS IN PLAY`, '#fff1a3', 680);
+      if (game.runCoins % 3 === 0) ui.haptic(7);
+    }
+  });
+
+  const renderer = new root.DriftSandRenderer.SandRenderer({
+    canvas,
+    terrain,
+    world,
+    sand,
+    coins,
+    camera,
+    selectedSkin: ui.selectedSkin,
+    selectedWorld: ui.selectedWorld,
+    score,
+    presentation: () => ui.save.settings,
+    bestDistance: () => ui.save.bestDistance,
+    showBestMarker: () => game.mode === 'playing' || game.mode === 'paused' || game.mode === 'ending',
+    showCoins: () => game.mode === 'playing' || game.mode === 'paused' || game.mode === 'ending'
+  });
+  const pilot = new root.DriftAutopilot.CurvePilot({ world, terrain });
+
+  function nextSeed() {
+    const time = Date.now() >>> 0;
+    const runs = (ui.save.runs + 1) * 0x9e3779b1;
+    return (time ^ runs ^ Math.floor(performance.now() * 1000)) >>> 0;
+  }
+
+  function distanceMeters() {
+    return Math.max(0, (world.ball.x - START_X) * METERS_PER_WORLD_UNIT);
+  }
+
+  function altitude() {
+    return Math.max(0, terrain.frame(world.ball.x, world.ball.radius).centerY - world.ball.y);
+  }
+
+  function resetCamera(immediate = true) {
+    const scale = Math.max(0.1, renderer.baseScale * camera.zoom);
+    const targetX = world.ball.x - renderer.W * 0.28 / scale;
+    const targetY = world.ball.y - renderer.H * 0.57 / scale;
+    if (immediate) {
+      camera.x = targetX;
+      camera.y = targetY;
+      camera.spaceBlend = 0;
+    }
+  }
+
+  function updateCamera(dt) {
+    const ball = world.ball;
+    const speed = Math.hypot(ball.vx, ball.vy);
+    const airHeight = altitude();
+    const targetZoom = clamp(1.015 - speed / 4900 - airHeight / 4300, 0.72, 0.98);
+    camera.zoom = follow(camera.zoom, targetZoom, ball.grounded ? 2.2 : 1.55, dt);
+    const scale = Math.max(0.1, renderer.baseScale * camera.zoom);
+    const anchorX = renderer.W * (game.mode === 'menu' ? 0.34 : 0.285);
+    const anchorY = renderer.H * (ball.grounded ? 0.57 : clamp(0.52 + ball.vy / 7000, 0.46, 0.58));
+    const targetX = ball.x - anchorX / scale;
+    const targetY = ball.y - anchorY / scale;
+    const xDelta = targetX - camera.x;
+    const yDelta = targetY - camera.y;
+    const xDeadzone = 12 / scale;
+    const yDeadzone = 8 / scale;
+    if (Math.abs(xDelta) > xDeadzone) camera.x = follow(camera.x, targetX - Math.sign(xDelta) * xDeadzone, 3.7, dt);
+    if (Math.abs(yDelta) > yDeadzone) camera.y = follow(camera.y, targetY - Math.sign(yDelta) * yDeadzone, ball.grounded ? 2.6 : 3.5, dt);
+    camera.spaceBlend = follow(camera.spaceBlend, clamp((airHeight - 620) / 1050, 0, 0.82), 2.1, dt);
+  }
+
+  function setHeld(held) {
+    if (game.mode !== 'playing') {
+      game.held = false;
+      return;
+    }
+    const next = Boolean(held);
+    if (next === game.held) return;
+    game.held = next;
+    ui.audio.unlock();
+    updateTutorialInput(next);
+  }
+
+  function beginTutorial() {
+    if (ui.save.tutorialSeen) {
+      game.tutorialStage = -1;
+      ui.hideCoach(false);
+      return;
+    }
+    game.tutorialStage = 0;
+    ui.showCoach('HOLD TO DIVE', 'Press the world to build speed', false);
+  }
+
+  function updateTutorialInput(held) {
+    if (game.tutorialStage < 0) return;
+    if (game.tutorialStage === 0 && held) {
+      game.tutorialStage = 1;
+      ui.showCoach('POWER THROUGH THE BOWL', 'Keep holding on the downhill', true);
+    } else if (game.tutorialStage === 2 && !held) {
+      ui.showCoach('LET THE CURVE LIFT YOU', 'Stay released through the uphill', false);
+    } else if (game.tutorialStage === 3 && held && !world.ball.grounded) {
+      game.tutorialStage = 4;
+      ui.showCoach('AIM FOR THE SLOPE', 'Release if your descent gets too steep', true);
+    }
+  }
+
+  function updateTutorialWorld() {
+    if (game.tutorialStage < 0) return;
+    const frame = terrain.frame(world.ball.x, world.ball.radius);
+    if (game.tutorialStage === 1 && world.ball.x > 780 && frame.slope < -0.09) {
+      game.tutorialStage = 2;
+      ui.showCoach('RELEASE TO FLY', 'Let go as the curve lifts you', game.held);
+    } else if (game.tutorialStage === 3 && !world.ball.grounded && world.ball.vy > 40) {
+      ui.showCoach('HOLD TO DIVE', 'Steepen your descent toward the downhill', game.held);
+    }
+  }
+
+  function processScoreEvents(events) {
+    for (const event of events) {
+      if (event.type === 'line-cross') {
+        game.metrics.lineCrossings += 1;
+        ui.audio.line();
+        ui.haptic(8);
+        sand.lineCross(world.ball.x, world.ball.y, ui.selectedSkin().burst);
+        renderer.kick(1.8);
+        ui.quip(event.crossing === 1 ? 'FLOW LINE CROSSED' : `AIR LINK  ${event.crossing}`, '#fff5a8', 680);
+      } else if (event.type === 'tier-up' && event.tier > 0) {
+        ui.audio.tier(event.tier);
+        ui.quip(event.label, '#d9ffff', 600);
+      } else if (event.type === 'bank') {
+        game.metrics.bankedFlow += event.banked;
+        game.metrics.bestBank = Math.max(game.metrics.bestBank, event.banked);
+        game.metrics.bestMultiplier = Math.max(game.metrics.bestMultiplier, event.multiplier);
+        if (event.banked > 0) ui.audio.bank(event.banked);
+        if (event.lost > 0) ui.audio.lost();
+        const gradeLabel = event.grade === 'perfect' ? 'BUTTER LANDING' : event.grade === 'good' ? 'SMOOTH LANDING' : event.grade === 'recovery' ? 'RECOVERY SAVE' : event.grade === 'rough' ? 'ROUGH — HOLD THE LINE' : 'HEAVY LANDING';
+        const bankCopy = event.banked > 0 ? `  +${event.banked} BANKED` : '';
+        const color = event.grade === 'perfect' ? '#fff4a8' : event.grade === 'recovery' ? '#8ff7ec' : '#ffffff';
+        ui.quip(`${gradeLabel}${bankCopy}`, color, 900);
+      } else if (event.type === 'pending-lost' && event.lost > 0) {
+        ui.quip(`${event.lost} FLOW LOST`, '#ffb0a0', 720);
+        ui.audio.lost();
+      } else if (event.type === 'distance-milestone') {
+        ui.quip(`${Math.floor(event.distance)} m  •  KEEP THE FLOW`, '#d9ffff', 520);
+      }
+    }
+  }
+
+  function handleLanding(event) {
+    game.metrics.landings += 1;
+    game.metrics.longestAir = Math.max(game.metrics.longestAir, event.flight?.airtime || 0);
+    game.metrics.maxAltitude = Math.max(game.metrics.maxAltitude, event.flight?.maxAltitude || 0);
+    game.metrics.maxSpeed = Math.max(game.metrics.maxSpeed, event.flight?.maxSpeed || event.speed || 0);
+    if (event.grade === 'perfect') game.metrics.perfects += 1;
+    if (event.grade === 'perfect' || event.grade === 'good') game.metrics.smoothLandings += 1;
+    if (event.grade === 'recovery') game.metrics.recoveries += 1;
+    sand.landing(event);
+    ui.audio.land(event.grade);
+    ui.haptic(event.grade === 'perfect' ? [8, 18, 8] : event.grade === 'recovery' ? [22, 28, 12] : event.grade === 'hard' ? 28 : 11);
+    renderer.kick(event.grade === 'perfect' ? 3.5 : event.grade === 'recovery' ? 6 : event.grade === 'hard' ? 7 : 2.4);
+    processScoreEvents(score.land(event.grade));
+    if (game.tutorialStage >= 0) {
+      ui.hideCoach(true);
+      game.tutorialStage = -1;
+      window.setTimeout(() => ui.systemToast('Controls learned • chase the next objective', true), 650);
+    }
+  }
+
+  function handlePhysicsEvents(events, demo = false) {
+    for (const event of events) {
+      if (event.type === 'launch') {
+        sand.takeoff(event.x, event.speed);
+        if (!demo) {
+          game.metrics.launches += 1;
+          score.beginFlight();
+          ui.audio.launch();
+          if (game.tutorialStage >= 1 && game.tutorialStage <= 2) {
+            game.tutorialStage = 3;
+            ui.showCoach('FLY THE ARC', 'Hold after the apex to match the landing', false);
+          }
+        }
+      } else if (event.type === 'landing') {
+        if (demo) {
+          sand.landing(event);
+        } else handleLanding(event);
+      } else if (event.type === 'crash' || event.type === 'stall') {
+        if (demo) resetDemo();
+        else finishRun(event);
+      }
+      if (game.mode === 'ending') break;
+    }
+  }
+
+  function finishRun(event) {
+    if (game.mode !== 'playing') return;
+    game.mode = 'ending';
+    game.held = false;
+    game.pointerId = null;
+    ui.hideCoach(false);
+    processScoreEvents(score.losePending(event.type));
+    const impactY = event.type === 'stall' ? terrain.frame(world.ball.x, world.ball.radius).centerY : world.ball.y;
+    sand.crash(world.ball.x, impactY);
+    renderer.kick(event.type === 'stall' ? 4.5 : 10);
+    ui.audio.crash();
+    ui.haptic([34, 38, 48]);
+    ui.gameplayVisible(true, 'ending');
+
+    const copy = event.type === 'stall'
+      ? { title: 'Momentum faded', reason: 'Dive deeper through the bowls, then release as the curve lifts you.' }
+      : event.reason === 'backward'
+        ? { title: 'Curve missed', reason: 'Meet the dune while moving forward and match its downhill angle.' }
+        : { title: 'Hard landing', reason: 'Hold after the apex to steepen your descent into the next slope.' };
+
+    clearTimeout(game.endTimer);
+    game.endTimer = window.setTimeout(() => {
+      const snapshot = score.snapshot();
+      const result = ui.bankRun({
+        score: snapshot.score,
+        distance: game.distance,
+        coins: game.runCoins,
+        metrics: game.metrics
+      });
+      game.mode = 'gameover';
+      ui.gameplayVisible(false, 'gameover');
+      ui.showGameOver({
+        ...copy,
+        score: snapshot.score,
+        distance: game.distance,
+        coins: game.runCoins,
+        metrics: game.metrics,
+        result
+      });
+    }, 390);
+  }
+
+  function resetDemo() {
+    clearTimeout(game.endTimer);
+    game.runSeed = 0x51f15e;
+    world.reset(game.runSeed);
+    score.resetRun();
+    sand.clear();
+    coins.reset();
+    pilot.reset('demo');
+    game.held = false;
+    game.accumulator = 0;
+    game.demoResetClock = 0;
+    camera.zoom = 0.94;
+    resetCamera(true);
+  }
+
+  function startRun() {
+    clearTimeout(game.endTimer);
+    ui.audio.unlock();
+    game.runSeed = nextSeed();
+    world.reset(game.runSeed);
+    score.resetRun();
+    sand.clear();
+    coins.reset();
+    pilot.reset('run');
+    game.mode = 'playing';
+    game.held = false;
+    game.pointerId = null;
+    game.accumulator = 0;
+    game.runCoins = 0;
+    game.distance = 0;
+    game.metrics = newMetrics();
+    camera.zoom = 0.94;
+    resetCamera(true);
+    ui.closeOverlays();
+    ui.gameplayVisible(true, 'playing');
+    ui.audio.setMode('playing');
+    ui.audio.click();
+    beginTutorial();
+    refreshHud();
+  }
+
+  function showMenu(view = 'main') {
+    clearTimeout(game.endTimer);
+    game.mode = 'menu';
+    game.held = false;
+    game.pointerId = null;
+    ui.hideCoach(false);
+    ui.gameplayVisible(false, 'menu');
+    ui.openMenu(view);
+    resetDemo();
+    game.mode = 'menu';
+    window.dispatchEvent(new Event('driftline:safe-update'));
+  }
+
+  function pauseRun() {
+    if (game.mode !== 'playing') return;
+    game.mode = 'paused';
+    game.held = false;
+    game.pointerId = null;
+    ui.showPause({ score: score.snapshot().score, distance: game.distance });
+    ui.gameplayVisible(true, 'paused');
+  }
+
+  function resumeRun() {
+    if (game.mode !== 'paused') return;
+    game.mode = 'playing';
+    game.held = false;
+    game.accumulator = 0;
+    game.lastTime = performance.now();
+    ui.hidePause();
+    ui.gameplayVisible(true, 'playing');
+  }
+
+  function confirmRestart() {
+    if (game.mode !== 'paused') return;
+    ui.confirm({
+      title: 'Restart this run?',
+      copy: 'Current distance, flow, and run coins will be discarded.',
+      accept: 'RESTART RUN',
+      onAccept: startRun
+    });
+  }
+
+  function confirmLeaveRun() {
+    if (game.mode !== 'paused') return;
+    ui.confirm({
+      title: 'Return to the menu?',
+      copy: 'This unfinished run will not be added to your records.',
+      accept: 'LEAVE RUN',
+      onAccept: () => showMenu('main')
+    });
+  }
+
+  function presentationChanged() {
+    worldFade?.classList.add('active');
+    window.setTimeout(() => {
+      renderer.themeChanged();
+      document.documentElement.style.setProperty('--world-accent', ui.selectedWorld().accent);
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', ui.selectedWorld().skyTop);
+      worldFade?.classList.remove('active');
+    }, ui.save.settings.motion ? 150 : 0);
+  }
+
+  ui.bind({
+    start: startRun,
+    restart: confirmRestart,
+    menu: () => showMenu('main'),
+    garage: () => showMenu('garage'),
+    pause: pauseRun,
+    resume: resumeRun,
+    leaveRun: confirmLeaveRun,
+    skipIntro: () => intro.skip(),
+    presentationChanged
+  });
+
+  const intro = new root.DriftIntro.IntroCinematic({
+    canvas: document.getElementById('introCanvas'),
+    splash: ui.U.splash,
+    logo: ui.U.splashLogo,
+    selectedSkin: ui.selectedSkin,
+    selectedWorld: ui.selectedWorld,
+    motionEnabled: () => ui.save.settings.motion,
+    onImpact: () => {
+      ui.audio.unlock();
+      ui.audio.land('perfect');
+      ui.haptic([7, 18, 7]);
+    },
+    onComplete: () => {
+      try { sessionStorage.setItem('driftline-intro-seen-v22', '1'); } catch (_) {}
+      ui.finishSplash();
+      showMenu('main');
+    }
+  });
+
+  function updatePlaying(dt) {
+    const events = world.step(dt, game.held);
+    handlePhysicsEvents(events, false);
+    if (game.mode !== 'playing') return;
+    game.distance = distanceMeters();
+    const speed = Math.hypot(world.ball.vx, world.ball.vy);
+    const height = altitude();
+    game.metrics.maxSpeed = Math.max(game.metrics.maxSpeed, speed);
+    game.metrics.maxAltitude = Math.max(game.metrics.maxAltitude, height);
+    processScoreEvents(score.updateDistance(game.distance));
+    processScoreEvents(score.update(world.ball, dt, world.flight.airtime));
+    coins.update();
+    coins.collect();
+    sand.update(dt, ui.selectedSkin());
+    updateCamera(dt);
+    updateTutorialWorld();
+    game.audioClock -= dt;
+    if (game.audioClock <= 0) {
+      game.audioClock = 0.09;
+      ui.audio.updateMotion(speed, world.ball.grounded, game.held);
+    }
+  }
+
+  function updateDemo(dt) {
+    game.demoResetClock += dt;
+    const held = pilot.update(dt);
+    const events = world.step(dt, held);
+    handlePhysicsEvents(events, true);
+    if (game.mode !== 'menu') return;
+    coins.update();
+    sand.update(dt, ui.selectedSkin());
+    updateCamera(dt);
+    if (world.ball.x > 28000 || game.demoResetClock > 64) resetDemo();
+    game.audioClock -= dt;
+    if (game.audioClock <= 0) {
+      game.audioClock = 0.14;
+      ui.audio.updateMotion(Math.hypot(world.ball.vx, world.ball.vy), world.ball.grounded, held);
+    }
+  }
+
+  function refreshHud() {
+    if (game.mode !== 'playing' && game.mode !== 'ending' && game.mode !== 'paused') return;
+    const snapshot = score.snapshot();
+    const speed = Math.hypot(world.ball.vx, world.ball.vy);
+    const height = altitude();
+    ui.updateHud({
+      score: snapshot.score,
+      distance: game.distance,
+      pending: snapshot.pending,
+      multiplier: snapshot.multiplier,
+      coins: game.runCoins,
+      speed,
+      altitude: height / 5,
+      aboveLine: snapshot.aboveLine
+    });
+  }
+
+  function frame(time) {
+    const dt = Math.min(MAX_FRAME, Math.max(0, (time - game.lastTime) / 1000));
+    game.lastTime = time;
+    if (game.mode === 'playing' || game.mode === 'menu') {
+      game.accumulator = Math.min(game.accumulator + dt, FIXED_STEP * 8);
+      while (game.accumulator >= FIXED_STEP) {
+        if (game.mode === 'playing') updatePlaying(FIXED_STEP);
+        else if (game.mode === 'menu') updateDemo(FIXED_STEP);
+        game.accumulator -= FIXED_STEP;
+        if (game.mode !== 'playing' && game.mode !== 'menu') break;
+      }
+    } else if (game.mode === 'ending') {
+      sand.update(dt, ui.selectedSkin());
+      updateCamera(dt);
+    }
+    refreshHud();
+    renderer.draw(time);
+    requestAnimationFrame(frame);
+  }
+
+  function activePointerDown(event) {
+    if (game.mode !== 'playing' || game.pointerId !== null) return;
+    game.pointerId = event.pointerId;
+    try { canvas.setPointerCapture?.(event.pointerId); } catch (_) {}
+    setHeld(true);
+    event.preventDefault();
+  }
+
+  function activePointerUp(event) {
+    if (game.pointerId === null || (event.pointerId !== undefined && event.pointerId !== game.pointerId)) return;
+    try { canvas.releasePointerCapture?.(game.pointerId); } catch (_) {}
+    game.pointerId = null;
+    setHeld(false);
+    event.preventDefault?.();
+  }
+
+  canvas.addEventListener('pointerdown', activePointerDown, { passive: false });
+  canvas.addEventListener('pointerup', activePointerUp, { passive: false });
+  canvas.addEventListener('pointercancel', activePointerUp, { passive: false });
+  window.addEventListener('pointerup', activePointerUp, { passive: false });
+  window.addEventListener('pointercancel', activePointerUp, { passive: false });
+  canvas.addEventListener('lostpointercapture', event => {
+    if (event.pointerId === game.pointerId) {
+      game.pointerId = null;
+      setHeld(false);
+    }
+  });
+
+  document.addEventListener('keydown', event => {
+    if ((event.code === 'Space' || event.code === 'ArrowDown') && !event.repeat && game.mode === 'playing') {
+      setHeld(true);
+      event.preventDefault();
+    } else if (event.code === 'Escape' && game.mode === 'playing') {
+      pauseRun();
+      event.preventDefault();
+    }
+  });
+  document.addEventListener('keyup', event => {
+    if ((event.code === 'Space' || event.code === 'ArrowDown') && game.mode === 'playing') {
+      setHeld(false);
+      event.preventDefault();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && game.mode === 'playing') pauseRun();
+    game.lastTime = performance.now();
+    game.accumulator = 0;
+  });
+  window.addEventListener('blur', () => {
+    if (game.mode === 'playing' && !document.hasFocus()) pauseRun();
+  });
+
+  let resizeTimer = 0;
+  function handleResize() {
+    renderer.resize(true);
+    intro.resize();
+    if (game.mode !== 'playing' && game.mode !== 'ending') resetCamera(true);
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      renderer.resize(true);
+      intro.resize();
+    }, 180);
+  }
+  window.addEventListener('resize', handleResize, { passive: true });
+  window.visualViewport?.addEventListener('resize', handleResize, { passive: true });
+
+  root.__DRIFTLINE__ = {
+    version: 22,
+    get mode() { return game.mode; },
+    snapshot() {
+      return {
+        mode: game.mode,
+        seed: game.runSeed,
+        distance: game.distance,
+        runCoins: game.runCoins,
+        score: score.snapshot(),
+        ball: { ...world.ball },
+        camera: { ...camera },
+        coins: coins.snapshot(),
+        metrics: game.metrics ? { ...game.metrics } : null
+      };
+    }
+  };
+
+  ui.render();
+  presentationChanged();
+  resetDemo();
+  renderer.draw(performance.now());
+  requestAnimationFrame(frame);
+
+  let introSeen = false;
+  try { introSeen = sessionStorage.getItem('driftline-intro-seen-v22') === '1'; } catch (_) {}
+  if (introSeen || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    showMenu('main');
+  } else {
+    game.mode = 'intro';
+    ui.closeOverlays();
+    ui.showSplash();
+    intro.start();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);

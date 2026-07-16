@@ -1,14 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2172 724" preserveAspectRatio="xMidYMid slice">
-<defs>
-  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00c8d1"/><stop offset=".43" stop-color="#8ce8d8"/><stop offset=".68" stop-color="#e8f2a7"/><stop offset="1" stop-color="#f7ef9d"/></linearGradient>
-  <linearGradient id="far" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9be6c8"/><stop offset="1" stop-color="#5fc9af"/></linearGradient>
-  <linearGradient id="mid" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#74d7bd"/><stop offset="1" stop-color="#36b9a9"/></linearGradient>
-  <linearGradient id="near" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#53c8b5"/><stop offset="1" stop-color="#159fa0"/></linearGradient>
-</defs>
-<rect width="2172" height="724" fill="url(#sky)"/>
-<g fill="#d8fbeb" opacity=".48"><rect x="-35" y="112" width="158" height="78" rx="38"/><rect x="168" y="62" width="170" height="57" rx="28"/><rect x="414" y="150" width="116" height="39" rx="19"/><rect x="660" y="65" width="89" height="31" rx="15"/><rect x="747" y="173" width="123" height="44" rx="22"/><rect x="820" y="120" width="206" height="71" rx="35"/><rect x="1169" y="178" width="106" height="39" rx="19"/><rect x="1321" y="145" width="98" height="34" rx="17"/><rect x="1503" y="84" width="207" height="77" rx="38"/><rect x="1763" y="194" width="98" height="34" rx="17"/><rect x="1960" y="113" width="212" height="77" rx="38"/></g>
-<path d="M0 357c123 19 177 77 254 76 79-1 84-79 163-84 93-5 139 88 235 92 89 4 114-74 206-84 106-12 146 95 250 99 99 4 131-89 230-98 96-9 145 71 243 73 95 2 128-75 218-83 72-6 122 40 173 55v321H0z" fill="url(#far)" opacity=".78"/>
-<path d="M0 425c133-49 205 77 330 73 115-4 171-112 290-121 129-10 180 113 306 120 127 7 194-102 316-99 121 3 164 106 291 111 126 5 187-111 314-114 121-3 194 93 325 100v229H0z" fill="url(#mid)" opacity=".88"/>
-<path d="M0 520c120-46 210 17 317 25 115 9 193-42 304-43 126-1 204 81 328 79 121-2 177-91 297-91 126 0 202 91 331 91 115 0 186-61 300-62 103-1 192 43 295 83v122H0z" fill="url(#near)"/>
-<g fill="#ffffff" opacity=".16"><path d="M63 414c83-20 150 25 218 54-72-8-143 12-218 42z"/><path d="M458 381c91-31 153 4 223 54-83-13-148 7-223 44z"/><path d="M1009 366c78-30 149 2 215 55-86-16-151 11-215 48z"/><path d="M1622 398c72-29 148-8 216 46-80-10-147 7-216 43z"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2172 724" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="title desc">
+  <title id="title">Sunwake desert</title>
+  <desc id="desc">A wide turquoise sunrise above flowing layers of paper-cut desert and honey-gold sand.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07aebc"/>
+      <stop offset="0.45" stop-color="#64d5c8"/>
+      <stop offset="0.72" stop-color="#cce9ba"/>
+      <stop offset="1" stop-color="#fff0b1"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fffbd5" stop-opacity="0.92"/>
+      <stop offset="0.42" stop-color="#fff2aa" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#fff2aa" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="nearSand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8cf72"/>
+      <stop offset="0.45" stop-color="#efb654"/>
+      <stop offset="1" stop-color="#c87838"/>
+    </linearGradient>
+    <pattern id="grain" width="48" height="48" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="12" r="1.7" fill="#ffffff" opacity="0.16"/>
+      <circle cx="35" cy="31" r="1.2" fill="#073441" opacity="0.09"/>
+      <path d="M15 40l8-3" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.1"/>
+    </pattern>
+  </defs>
+
+  <rect width="2172" height="724" fill="url(#sky)"/>
+  <circle cx="1680" cy="148" r="170" fill="url(#halo)"/>
+  <circle cx="1680" cy="148" r="62" fill="#fff6bc"/>
+
+  <g fill="none" stroke="#efffdc" stroke-width="8" stroke-linecap="round" opacity="0.52">
+    <path d="M144 158C172 132 203 132 232 158C260 132 291 132 319 158"/>
+    <path d="M692 105C714 85 738 85 760 105C782 85 806 85 828 105"/>
+    <path d="M1881 246C1903 226 1927 226 1949 246C1971 226 1995 226 2017 246"/>
+  </g>
+
+  <path d="M0 366C150 294 263 311 389 377C510 440 614 407 733 344C863 275 972 295 1093 370C1216 447 1336 428 1461 346C1576 271 1704 285 1825 360C1936 429 2049 414 2172 337V724H0Z" fill="#74cfb9"/>
+  <path d="M0 429C141 355 255 361 374 425C497 491 617 469 745 394C865 324 983 344 1107 420C1220 489 1348 483 1470 408C1608 323 1726 345 1843 421C1959 496 2070 478 2172 414V724H0Z" fill="#3fb3a9"/>
+  <path d="M0 503C132 440 250 437 372 498C506 565 617 551 748 479C874 409 988 431 1114 503C1235 572 1362 566 1492 494C1614 427 1732 441 1853 511C1968 578 2074 568 2172 516V724H0Z" fill="#20989a"/>
+  <path d="M0 587C132 504 257 508 377 583C501 661 619 654 746 568C870 484 992 501 1117 588C1240 674 1369 665 1495 578C1612 497 1738 504 1859 587C1973 666 2078 659 2172 602V724H0Z" fill="url(#nearSand)" stroke="#fff1bd" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M-30 659C110 575 249 589 370 649C507 717 632 704 762 625C884 551 1008 574 1131 651C1255 728 1388 710 1510 638C1635 564 1762 579 1882 654C1984 718 2081 713 2202 652" fill="none" stroke="#d98b43" stroke-width="15" stroke-linecap="round" opacity="0.58"/>
+  <rect width="2172" height="724" fill="url(#grain)"/>
 </svg>

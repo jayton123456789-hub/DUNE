@@ -1,0 +1,16 @@
+{
+  "name": "driftline-dune",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Deterministic browser-game regression suite for Driftline",
+  "scripts": {
+    "test": "npm run test:physics && npm run test:score && npm run test:routes && npm run test:pilot",
+    "test:physics": "node tests/physics-probe.mjs",
+    "test:score": "node tests/score-system.mjs",
+    "test:routes": "node tests/route-coins.mjs",
+    "test:pilot": "node tests/autopilot-probe.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
