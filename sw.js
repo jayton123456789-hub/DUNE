@@ -1,23 +1,24 @@
 'use strict';
 
 const CACHE_PREFIX = 'driftline-';
-const CACHE_NAME = `${CACHE_PREFIX}shell-v22`;
+const CACHE_NAME = `${CACHE_PREFIX}shell-v24`;
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=22',
-  './src/physics-core.js?v=22',
-  './src/coin-routes.js?v=22',
-  './src/coin-field.js?v=22',
-  './src/score-system.js?v=22',
-  './src/autopilot.js?v=22',
-  './src/sand-effects.js?v=22',
-  './src/art.js?v=22',
-  './src/game-ui.js?v=22',
-  './src/sand-renderer.js?v=22',
-  './src/intro-cinematic.js?v=22',
-  './src/main.js?v=22',
-  './src/sw-register.js?v=22',
+  './styles.css?v=24',
+  './src/physics-core.js?v=24',
+  './src/camera-system.js?v=24',
+  './src/coin-routes.js?v=24',
+  './src/coin-field.js?v=24',
+  './src/score-system.js?v=24',
+  './src/autopilot.js?v=24',
+  './src/sand-effects.js?v=24',
+  './src/art.js?v=24',
+  './src/game-ui.js?v=24',
+  './src/sand-renderer.js?v=24',
+  './src/intro-cinematic.js?v=24',
+  './src/main.js?v=24',
+  './src/sw-register.js?v=24',
   './manifest.webmanifest',
   './assets/icon.svg',
   './assets/icon-192.png',

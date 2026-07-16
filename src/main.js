@@ -1,7 +1,7 @@
 (function startDriftline(root) {
   'use strict';
 
-  const REQUIRED = ['DriftPhysics', 'DriftCoinRoutes', 'DriftSmartCoins', 'DriftScore', 'DriftAutopilot', 'DriftSand', 'DriftArt', 'DriftGameUI', 'DriftSandRenderer', 'DriftIntro'];
+  const REQUIRED = ['DriftPhysics', 'DriftCamera', 'DriftCoinRoutes', 'DriftSmartCoins', 'DriftScore', 'DriftAutopilot', 'DriftSand', 'DriftArt', 'DriftGameUI', 'DriftSandRenderer', 'DriftIntro'];
   const missing = REQUIRED.filter(name => !root[name]);
   if (missing.length) throw new Error(`Driftline could not start: missing ${missing.join(', ')}`);
 
@@ -19,7 +19,18 @@
   const terrain = new root.DriftPhysics.SplineTerrain({ seed: 0x51f15e });
   const world = new root.DriftPhysics.PhysicsWorld({ terrain });
   const score = new root.DriftScore.ScoreSystem();
-  const camera = { x: 0, y: 0, zoom: 0.94, spaceBlend: 0 };
+  const camera = {
+    x: 0,
+    y: 0,
+    zoom: 0.94,
+    targetZoom: 0.94,
+    spaceBlend: 0,
+    framingBlend: 0,
+    ballScreenY: 0,
+    floorScreenY: 0,
+    groundReferenceY: 0,
+    lookahead: 0
+  };
   const sand = new root.DriftSand.SandSystem(terrain, world, () => ui.save.settings.motion);
 
   const game = {
@@ -101,35 +112,90 @@
     return Math.max(0, terrain.frame(world.ball.x, world.ball.radius).centerY - world.ball.y);
   }
 
+  function cameraTarget(dt = 0, trackFloor = false) {
+    return root.DriftCamera.computeCameraTarget({
+      ball: world.ball,
+      terrain,
+      viewportWidth: renderer.W,
+      viewportHeight: renderer.H,
+      baseScale: renderer.baseScale,
+      mode: game.mode,
+      currentGroundReferenceY: trackFloor ? camera.groundReferenceY : undefined,
+      dt
+    });
+  }
+
+  function cameraScale(zoom = camera.zoom) {
+    return Math.max(1e-6, renderer.baseScale * zoom);
+  }
+
   function resetCamera(immediate = true) {
-    const scale = Math.max(0.1, renderer.baseScale * camera.zoom);
-    const targetX = world.ball.x - renderer.W * 0.28 / scale;
-    const targetY = world.ball.y - renderer.H * 0.57 / scale;
+    const framing = cameraTarget();
+    const zoom = framing.targetZoom;
+    const scale = cameraScale(zoom);
+    const targetX = world.ball.x - renderer.W * framing.anchorXRatio / scale;
+    const targetY = world.ball.y - renderer.H * framing.anchorYRatio / scale;
     if (immediate) {
+      camera.zoom = zoom;
       camera.x = targetX;
       camera.y = targetY;
-      camera.spaceBlend = 0;
+      camera.targetZoom = framing.targetZoom;
+      camera.framingBlend = framing.framingBlend;
+      camera.groundReferenceY = framing.groundReferenceY;
+      camera.lookahead = framing.lookahead;
+      camera.ballScreenY = renderer.H * framing.anchorYRatio;
+      camera.floorScreenY = framing.targetFloorScreenY;
+      camera.spaceBlend = clamp((framing.verticalSpan - 520) / 1200, 0, 0.82);
     }
   }
 
   function updateCamera(dt) {
     const ball = world.ball;
-    const speed = Math.hypot(ball.vx, ball.vy);
-    const airHeight = altitude();
-    const targetZoom = clamp(1.015 - speed / 4900 - airHeight / 4300, 0.72, 0.98);
-    camera.zoom = follow(camera.zoom, targetZoom, ball.grounded ? 2.2 : 1.55, dt);
-    const scale = Math.max(0.1, renderer.baseScale * camera.zoom);
-    const anchorX = renderer.W * (game.mode === 'menu' ? 0.34 : 0.285);
-    const anchorY = renderer.H * (ball.grounded ? 0.57 : clamp(0.52 + ball.vy / 7000, 0.46, 0.58));
+    const framing = cameraTarget(dt, true);
+    const zoomSpeed = framing.targetZoom < camera.zoom
+      ? 5.5
+      : ball.grounded ? 1.8 : 1.1;
+    camera.zoom = follow(camera.zoom, framing.targetZoom, zoomSpeed, dt);
+    const scale = cameraScale();
+    const anchorX = renderer.W * framing.anchorXRatio;
+    const requestedAnchorY = renderer.H * framing.anchorYRatio;
+    const groundLimitedAnchorY = framing.floorAnchorPixels
+      - framing.floorSafetyPixels
+      - framing.verticalSpan * scale;
+    const anchorY = ball.grounded
+      ? requestedAnchorY
+      : clamp(Math.min(requestedAnchorY, groundLimitedAnchorY), framing.topAnchorPixels, requestedAnchorY);
+    const verticalFollowSpeed = ball.grounded ? 2.6 : lerp(4.2, 8.5, framing.framingBlend);
+    const velocityPressure = ball.grounded
+      ? 0
+      : clamp(framing.framingBlend + Math.abs(ball.vy) / 2400, 0, 1);
+    const verticalLead = ball.grounded
+      ? 0
+      : clamp(ball.vy / verticalFollowSpeed, -280, 220) * velocityPressure;
     const targetX = ball.x - anchorX / scale;
-    const targetY = ball.y - anchorY / scale;
+    const targetY = ball.y + verticalLead - anchorY / scale;
     const xDelta = targetX - camera.x;
     const yDelta = targetY - camera.y;
-    const xDeadzone = 12 / scale;
-    const yDeadzone = 8 / scale;
-    if (Math.abs(xDelta) > xDeadzone) camera.x = follow(camera.x, targetX - Math.sign(xDelta) * xDeadzone, 3.7, dt);
-    if (Math.abs(yDelta) > yDeadzone) camera.y = follow(camera.y, targetY - Math.sign(yDelta) * yDeadzone, ball.grounded ? 2.6 : 3.5, dt);
-    camera.spaceBlend = follow(camera.spaceBlend, clamp((airHeight - 620) / 1050, 0, 0.82), 2.1, dt);
+    const xDeadzone = lerp(12, 6, framing.framingBlend) / scale;
+    const yDeadzone = lerp(8, 3, framing.framingBlend) / scale;
+    if (Math.abs(xDelta) > xDeadzone) {
+      camera.x = follow(camera.x, targetX - Math.sign(xDelta) * xDeadzone, lerp(3.7, 4.5, framing.framingBlend), dt);
+    }
+    if (Math.abs(yDelta) > yDeadzone) {
+      camera.y = follow(
+        camera.y,
+        targetY - Math.sign(yDelta) * yDeadzone,
+        verticalFollowSpeed,
+        dt
+      );
+    }
+    camera.targetZoom = framing.targetZoom;
+    camera.framingBlend = framing.framingBlend;
+    camera.groundReferenceY = framing.groundReferenceY;
+    camera.lookahead = framing.lookahead;
+    camera.ballScreenY = (ball.y - camera.y) * scale;
+    camera.floorScreenY = (framing.groundReferenceY - camera.y) * scale;
+    camera.spaceBlend = follow(camera.spaceBlend, clamp((framing.verticalSpan - 520) / 1200, 0, 0.82), 2.1, dt);
   }
 
   function setHeld(held) {
@@ -424,7 +490,7 @@
       ui.haptic([7, 18, 7]);
     },
     onComplete: () => {
-      try { sessionStorage.setItem('driftline-intro-seen-v22', '1'); } catch (_) {}
+      try { sessionStorage.setItem('driftline-intro-seen-v24', '1'); } catch (_) {}
       ui.finishSplash();
       showMenu('main');
     }
@@ -575,7 +641,7 @@
   window.visualViewport?.addEventListener('resize', handleResize, { passive: true });
 
   root.__DRIFTLINE__ = {
-    version: 22,
+    version: 24,
     get mode() { return game.mode; },
     snapshot() {
       return {
@@ -599,7 +665,7 @@
   requestAnimationFrame(frame);
 
   let introSeen = false;
-  try { introSeen = sessionStorage.getItem('driftline-intro-seen-v22') === '1'; } catch (_) {}
+  try { introSeen = sessionStorage.getItem('driftline-intro-seen-v24') === '1'; } catch (_) {}
   if (introSeen || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     showMenu('main');
   } else {

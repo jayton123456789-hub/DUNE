@@ -371,7 +371,7 @@
         const x = this.sx(coin.x);
         const y = this.sy(coin.y);
         if (x < -38 || x > this.W + 38 || y < -42 || y > this.H + 42) continue;
-        globalThis.DriftArt.drawCoin(this.ctx, { x, y, radius: clamp(14 * this.scale(), 10, 17), phase: coin.phase, time });
+        globalThis.DriftArt.drawCoin(this.ctx, { x, y, radius: clamp(14 * this.scale(), 1, 17), phase: coin.phase, time });
       }
     }
 
@@ -467,7 +467,10 @@
       const altitude = Math.max(0, groundY - ball.y);
       const x = this.sx(ball.x);
       const y = this.sy(ball.y);
-      const radius = clamp(ball.radius * scale, 12, 30);
+      // The ball remains true to world scale as the altitude camera widens.
+      // A separate locator appears below 7px so the player can still read its
+      // position without making the physical ball look larger than the dunes.
+      const radius = clamp(ball.radius * scale, 1, 30);
       const shadowY = this.sy(groundY + ball.radius * 0.8);
       const shadowScale = clamp(1 - altitude / 700, 0.32, 1);
       c.save();
@@ -493,6 +496,25 @@
       }
 
       globalThis.DriftArt.drawBall(c, { x, y, radius, rotation: ball.rotation, skin: this.selectedSkin(), time });
+
+      if (radius < 7) {
+        const locatorAlpha = clamp((7 - radius) / 3.5, 0, 1);
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = locatorAlpha * 0.78;
+        c.strokeStyle = this.selectedSkin().trail === 'rainbow' ? '#ffffff' : this.selectedSkin().trail;
+        c.lineWidth = 1.35;
+        c.lineCap = 'round';
+        c.shadowColor = this.selectedSkin().burst;
+        c.shadowBlur = 2.5;
+        c.beginPath();
+        c.moveTo(x - 10, y); c.lineTo(x - 7, y);
+        c.moveTo(x + 7, y); c.lineTo(x + 10, y);
+        c.moveTo(x, y - 10); c.lineTo(x, y - 7);
+        c.moveTo(x, y + 7); c.lineTo(x, y + 10);
+        c.stroke();
+        c.restore();
+      }
     }
 
     draw(time = performance.now()) {

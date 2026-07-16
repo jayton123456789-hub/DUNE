@@ -27,6 +27,7 @@ Then visit `http://127.0.0.1:4173/`. Use a private window or clear the site serv
 ## Project map
 
 - `src/physics-core.js` owns the seeded terrain and fixed-step ball simulation.
+- `src/camera-system.js` frames the ball and forward landing corridor together, widening safely as altitude rises.
 - `src/score-system.js` owns flight, landing, distance, and multiplier scoring.
 - `src/coin-routes.js` and `src/coin-field.js` build fair, terrain-aware reward lines.
 - `src/sand-effects.js` and `src/sand-renderer.js` render the world, motion, particles, and feedback.
@@ -35,7 +36,7 @@ Then visit `http://127.0.0.1:4173/`. Use a private window or clear the site serv
 - `src/main.js` coordinates input, simulation, camera, audio, lifecycle, and run results.
 - `sw.js` precaches the complete app shell for repeat visits and offline play.
 
-The scripts in `tests/` are deterministic Node probes for terrain continuity, physics balance, route fairness, autopilot survival, and scoring rules.
+The scripts in `tests/` are deterministic Node probes for terrain continuity, altitude-aware camera framing, physics balance, route fairness, autopilot survival, and scoring rules.
 
 ## Publish with GitHub Pages
 
