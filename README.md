@@ -1,14 +1,15 @@
 # Driftline
 
-Driftline is a one-touch momentum arcade game built for fast landscape sessions on mobile and desktop browsers. Hold to carve into a downhill, release to turn that speed into flight, then reconnect with the next slope cleanly enough to keep the run alive.
+Driftline is a one-touch momentum arcade game built for fast landscape sessions on mobile and desktop browsers. Hold to drive across the ground, release near a crest to turn that speed into flight, then reconnect with the next slope cleanly enough to keep the run alive.
 
 The project is a complete static web app: there is no framework, build pipeline, account, or server dependency. Progress, records, unlocked worlds, and equipped ball styles are stored locally in the browser.
 
 ## Play
 
-- Touch or hold the canvas while moving downhill to dive and build speed.
-- Release before the crest to launch.
+- Touch or hold the canvas to accelerate forward on any ground slope; bowls and downhills build the most speed.
+- Keep holding through the climb, then release just before the crest to launch.
 - Match the next slope for a clean landing and a stronger score chain.
+- Rough landings drop you to a forward crawl instead of reversing; catastrophic impacts can still end the run.
 - Collect coins, complete goals, unlock ball styles, and reach new worlds.
 - On a keyboard, use <kbd>Space</kbd> or <kbd>Arrow Down</kbd> for the same hold/release control.
 

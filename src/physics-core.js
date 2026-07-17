@@ -8,6 +8,26 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const lerp = (a, b, amount) => a + (b - a) * amount;
   const dot = (ax, ay, bx, by) => ax * bx + ay * by;
+  const SHARP_BASIS_POWER = 6;
+  const SHARP_STRENGTH_LIMIT = 20;
+
+  function sharpEndBasis(t) {
+    const n = SHARP_BASIS_POWER;
+    const tn3 = Math.pow(t, n - 3);
+    const tn2 = tn3 * t;
+    const tn1 = tn2 * t;
+    const tn = tn1 * t;
+    const tnP1 = tn * t;
+    const tnP2 = tnP1 * t;
+    return {
+      value: tn - 2 * tnP1 + tnP2,
+      first: n * tn1 - 2 * (n + 1) * tn + (n + 2) * tnP1,
+      second: n * (n - 1) * tn2 - 2 * n * (n + 1) * tn1 + (n + 1) * (n + 2) * tn,
+      third: n * (n - 1) * (n - 2) * tn3
+        - 2 * n * (n + 1) * (n - 1) * tn2
+        + n * (n + 1) * (n + 2) * tn1
+    };
+  }
 
   class SeededRandom {
     constructor(seed) {
@@ -29,13 +49,13 @@
   }
 
   /**
-   * Endless C2-continuous terrain built from alternating dune crests and bowls.
+   * Endless terrain built from alternating dune crests and bowls.
    *
-   * Every segment uses quintic smoothstep. Position, slope, and curvature are
-   * all zero-matched at joins, so physics never encounters the invisible
-   * curvature seams that made the previous terrain feel kinked. Segment width
-   * is derived from its height change, keeping randomized hills readable and
-   * physically fair.
+   * Most joins are C2-continuous quintic curves. Deliberate spike crests use a
+   * monotonic quintic Hermite profile with a finite tip curvature: visibly
+   * sharper than the flow dunes, while remaining C2-continuous and safe for a ball
+   * with a real collision radius. Segment width is derived from height change
+   * and profile curvature so randomization never creates an unfair wall.
    */
   class SplineTerrain {
     constructor(options = {}) {
@@ -43,6 +63,7 @@
       this.bottom = options.bottom ?? 610;
       this.maxSlope = options.maxSlope ?? 1.28;
       this.maxCurvature = options.maxCurvature ?? 0.0125;
+      this.maxSpikeCurvature = options.maxSpikeCurvature ?? 0.04;
       this.seed = options.seed ?? 0x51f15e;
       this.points = [];
       this.featureLog = [];
@@ -65,24 +86,44 @@
       this.featureLog = ['opening-flow'];
       this._segments = [];
       this._cursor = 0;
+      // Every run gets a readable early spike before the fully procedural mix.
+      // This also teaches the player that sharp launch shapes are intentional.
+      this.addSpike(0);
+      this.featureLog.push('spike');
       this.ensure(9200);
       return this;
     }
 
-    safeWidth(fromY, toY, requestedWidth) {
+    safeWidth(
+      fromY,
+      toY,
+      requestedWidth,
+      profileCurvature = 5.78,
+      curvatureLimit = this.maxCurvature
+    ) {
       const delta = Math.abs(toY - fromY);
       // Quintic smoothstep has a peak first derivative of 1.875 and a peak
-      // second derivative just under 5.78 in normalized segment space.
+      // second derivative just under 5.78 in normalized segment space. Sharp
+      // tips pass their larger finite second-derivative budget here.
       const slopeWidth = delta * 1.875 / this.maxSlope;
-      const curvatureWidth = Math.sqrt(Math.max(1, delta) * 5.78 / this.maxCurvature);
+      const curvatureWidth = Math.sqrt(Math.max(1, delta) * profileCurvature / curvatureLimit);
       return clamp(Math.max(requestedWidth, slopeWidth, curvatureWidth), 300, 880);
     }
 
-    append(y, requestedWidth, kind) {
+    append(y, requestedWidth, kind, properties = {}) {
       const last = this.points[this.points.length - 1];
       const boundedY = clamp(y, this.top, this.bottom);
-      const width = this.safeWidth(last.y, boundedY, requestedWidth);
-      this.points.push({ x: last.x + width, y: boundedY, kind });
+      const tipCurvature = clamp(Number(properties.tipCurvature) || 0, 0, this.maxSpikeCurvature);
+      const isSharpSpan = Boolean(last.tipCurvature || tipCurvature);
+      const profileCurvature = isSharpSpan ? SHARP_STRENGTH_LIMIT * 2 : 5.78;
+      const curvatureLimit = isSharpSpan ? this.maxSpikeCurvature : this.maxCurvature;
+      const width = this.safeWidth(last.y, boundedY, requestedWidth, profileCurvature, curvatureLimit);
+      this.points.push({
+        x: last.x + width,
+        y: boundedY,
+        kind,
+        ...(tipCurvature ? { tipCurvature } : {})
+      });
       this._segments.length = Math.max(0, this.points.length - 2);
       return width;
     }
@@ -131,6 +172,40 @@
       this.append(this.crest(difficulty, 0.65), this.random.range(540, 740), 'landing-exit-crest');
     }
 
+    addSpike(difficulty) {
+      this.append(this.valley(difficulty, 0.9), this.random.range(500, 680), 'spike-bowl');
+      const crestY = this.crest(difficulty, 1.35);
+      const tipCurvature = Math.min(this.maxSpikeCurvature, this.random.range(0.034, 0.039));
+      const inboundDelta = Math.abs(crestY - this.points[this.points.length - 1].y);
+      const inboundMaxWidth = Math.sqrt(SHARP_STRENGTH_LIMIT * 2 * inboundDelta / tipCurvature);
+      this.append(
+        crestY,
+        Math.min(this.random.range(370, 500), inboundMaxWidth),
+        'spike-crest',
+        { tipCurvature }
+      );
+      const crestIndex = this.points.length - 1;
+      const landingY = this.valley(difficulty, 1);
+      const outboundDelta = Math.abs(landingY - crestY);
+      const outboundMaxWidth = Math.sqrt(SHARP_STRENGTH_LIMIT * 2 * outboundDelta / tipCurvature);
+      this.append(
+        landingY,
+        Math.min(this.random.range(430, 590), outboundMaxWidth),
+        'spike-landing-bowl'
+      );
+      const left = this.points[crestIndex - 1];
+      const crest = this.points[crestIndex];
+      const right = this.points[crestIndex + 1];
+      const leftWidth = crest.x - left.x;
+      const rightWidth = right.x - crest.x;
+      const leftCurvatureLimit = SHARP_STRENGTH_LIMIT * 2 * Math.abs(crest.y - left.y) / (leftWidth * leftWidth);
+      const rightCurvatureLimit = SHARP_STRENGTH_LIMIT * 2 * Math.abs(right.y - crest.y) / (rightWidth * rightWidth);
+      crest.tipCurvature = Math.min(tipCurvature, leftCurvatureLimit, rightCurvatureLimit);
+      this._segments[crestIndex - 1] = undefined;
+      this._segments[crestIndex] = undefined;
+      this.append(this.crest(difficulty, 0.7), this.random.range(500, 700), 'spike-exit-crest');
+    }
+
     addGlide(difficulty) {
       this.append(this.random.range(500, 565), this.random.range(700, 880), 'glide-bowl');
       this.append(this.crest(difficulty, 0.55), this.random.range(690, 860), 'glide-crest');
@@ -142,21 +217,29 @@
         const difficulty = clamp((last.x - 6500) / 42000, 0, 1);
         const roll = this.random.next();
         let feature;
-        if (roll < 0.32) {
+        if (roll < 0.22) {
           feature = 'flow';
           this.addFlow(difficulty);
-        } else if (roll < 0.56) {
+        } else if (roll < 0.41) {
           feature = 'double';
           this.addDouble(difficulty);
-        } else if (roll < 0.74) {
+        } else if (roll < 0.56) {
           feature = 'basin';
           this.addBasin(difficulty);
-        } else if (roll < 0.9) {
+        } else if (roll < 0.69) {
           feature = 'rhythm';
           this.addRhythm(difficulty);
-        } else if (roll < 0.975) {
+        } else if (roll < 0.78) {
           feature = 'launch';
           this.addLaunch(difficulty);
+        } else if (roll < 0.97) {
+          if (this.featureLog[this.featureLog.length - 1] === 'spike') {
+            feature = 'flow';
+            this.addFlow(difficulty);
+          } else {
+            feature = 'spike';
+            this.addSpike(difficulty);
+          }
         } else {
           feature = 'glide';
           this.addGlide(difficulty);
@@ -208,7 +291,16 @@
         width,
         invWidth: 1 / width,
         delta: b.y - a.y,
-        y0: a.y
+        y0: a.y,
+        // Convert the desired world-space tip curvature into a dimensionless
+        // Hermite strength for each side independently. The two sides then
+        // meet at the same physical curvature even when their spans differ.
+        sharpStart: a.tipCurvature && Math.abs(b.y - a.y) > 0.001
+          ? clamp(a.tipCurvature * width * width / (2 * Math.abs(b.y - a.y)), 0, SHARP_STRENGTH_LIMIT)
+          : 0,
+        sharpEnd: b.tipCurvature && Math.abs(b.y - a.y) > 0.001
+          ? clamp(b.tipCurvature * width * width / (2 * Math.abs(b.y - a.y)), 0, SHARP_STRENGTH_LIMIT)
+          : 0
       };
       this._segments[index] = segment;
       return segment;
@@ -222,10 +314,28 @@
       const t3 = t2 * t;
       const t4 = t3 * t;
       const t5 = t4 * t;
-      const smooth = 6 * t5 - 15 * t4 + 10 * t3;
-      const firstT = 30 * t2 * (t - 1) * (t - 1);
-      const secondT = 60 * t * (2 * t2 - 3 * t + 1);
-      const thirdT = 60 * (6 * t2 - 6 * t + 1);
+      let smooth = 6 * t5 - 15 * t4 + 10 * t3;
+      let firstT = 30 * t2 * (t - 1) * (t - 1);
+      let secondT = 60 * t * (2 * t2 - 3 * t + 1);
+      let thirdT = 60 * (6 * t2 - 6 * t + 1);
+
+      // These Hermite basis terms preserve endpoint position and tangent. At
+      // the non-spike end they also preserve zero curvature, so a spike never
+      // introduces a hidden kink into either neighboring flow dune.
+      if (segment.sharpEnd) {
+        const basis = sharpEndBasis(t);
+        smooth -= segment.sharpEnd * basis.value;
+        firstT -= segment.sharpEnd * basis.first;
+        secondT -= segment.sharpEnd * basis.second;
+        thirdT -= segment.sharpEnd * basis.third;
+      }
+      if (segment.sharpStart) {
+        const basis = sharpEndBasis(1 - t);
+        smooth += segment.sharpStart * basis.value;
+        firstT -= segment.sharpStart * basis.first;
+        secondT += segment.sharpStart * basis.second;
+        thirdT -= segment.sharpStart * basis.third;
+      }
       const slope = segment.delta * firstT * segment.invWidth;
       const second = segment.delta * secondT * segment.invWidth * segment.invWidth;
       const third = segment.delta * thirdT * segment.invWidth * segment.invWidth * segment.invWidth;
@@ -292,30 +402,41 @@
   const DEFAULT_CONFIG = Object.freeze({
     massKg: 136.0777,
     radius: 24,
+    startSpeed: 460,
     gravity: 455,
     groundGravity: 720,
-    groundDiveExtraGravity: 620,
+    groundDiveExtraGravity: 560,
     airDiveExtraGravity: 1350,
-    rollingInertiaFactor: 1.28,
-    rollingResistance: 1.35,
-    rollingSpeedDrag: 0.00072,
-    airDrag: 0.000011,
-    maxSpeedSafety: 2400,
+    rollingInertiaFactor: 1.24,
+    rollingResistance: 1.1,
+    rollingSpeedDrag: 0.00055,
+    coastTargetSpeed: 240,
+    coastResponse: 2.8,
+    heldTargetSpeed: 560,
+    heldResponse: 3.8,
+    heldUphillAssist: 850,
+    minimumForwardSpeed: 150,
+    minimumAirForwardSpeed: 110,
+    airForwardSpeed: 165,
+    heldAirForwardSpeed: 250,
+    airForwardResponse: 2.2,
+    airDrag: 0.000009,
+    maxSpeedSafety: 2700,
     maxSubsteps: 24,
     collisionIterations: 15,
     detachForceMargin: 34,
     minGroundContact: 0.065,
+    launchConfirmTime: 0.055,
     perfectAngle: 0.2,
     goodAngle: 0.6,
     perfectNormalSpeed: 235,
     goodNormalSpeed: 650,
     hardNormalSpeed: 1280,
     crashNormalSpeed: 1880,
-    crashAngle: 1.58,
-    stallSpeed: 18,
-    stallDelay: 1.15,
+    crashAngle: 1.42,
     failAfterX: 1750,
     safetyNetEndX: 2050,
+    hardLandingRecoverySpeed: 200,
     perfectRetention: 1.012,
     goodRetention: 0.99,
     roughRetentionMin: 0.76,
@@ -335,7 +456,7 @@
       const radius = this.config.radius;
       const startX = 120;
       const frame = this.terrain.frame(startX, radius);
-      const speed = 315;
+      const speed = this.config.startSpeed;
       this.ball = {
         x: startX,
         y: frame.centerY,
@@ -365,7 +486,9 @@
         launchSpeed: speed,
         maxAltitude: 0,
         maxSpeed: speed,
-        distance: 0
+        distance: 0,
+        pendingLaunch: null,
+        confirmed: false
       };
     }
 
@@ -392,14 +515,14 @@
       ball.vy = frame.ty * speed;
       ball.y = frame.centerY - 0.02;
       this.flight = this.freshFlight(ball.x, ball.y, speed);
-      this.emit('launch', {
+      this.flight.pendingLaunch = {
         x: ball.x,
         y: ball.y,
         speed,
         slope: frame.slope,
         curvature: frame.curvature,
         normalForcePerMass
-      });
+      };
     }
 
     step(dt, held = false) {
@@ -410,7 +533,7 @@
         if (this.ball.grounded) this.stepGround(subDt, held);
         else this.stepAir(subDt, held);
         this.elapsed += subDt;
-        if (this.events.some(event => event.type === 'crash' || event.type === 'stall')) break;
+        if (this.events.some(event => event.type === 'crash')) break;
       }
       return this.consumeEvents();
     }
@@ -432,12 +555,16 @@
 
       const tangentGravity = totalGravity * frame.ty;
       const resistance = c.rollingResistance + speed * c.rollingSpeedDrag;
-      const acceleration = tangentGravity / c.rollingInertiaFactor - resistance;
-      speed = clamp(speed + acceleration * dt, 0, c.maxSpeedSafety);
-
-      // The deterministic opening is a tutorial runway. A tiny low-speed assist
-      // prevents a new player from getting stranded before learning the input.
-      if (ball.x < c.failAfterX) speed = Math.max(speed, 105);
+      const coastDrive = Math.max(0, c.coastTargetSpeed - speed) * c.coastResponse;
+      const heldDrive = held
+        ? Math.max(0, c.heldTargetSpeed - speed) * c.heldResponse
+          + c.heldUphillAssist * clamp(-frame.slope / 1.05, 0, 1)
+        : 0;
+      const acceleration = tangentGravity / c.rollingInertiaFactor
+        + coastDrive
+        + heldDrive
+        - resistance;
+      speed = clamp(speed + acceleration * dt, c.minimumForwardSpeed, c.maxSpeedSafety);
 
       ball.x += frame.tx * speed * dt;
       frame = this.terrain.frame(ball.x, ball.radius);
@@ -449,12 +576,10 @@
       ball.rotation += ball.omega * dt;
       ball.groundTime += dt;
 
-      if (ball.x > c.failAfterX && speed < c.stallSpeed && frame.slope < -0.04) ball.stallTime += dt;
-      else ball.stallTime = Math.max(0, ball.stallTime - dt * 2.25);
-
-      if (ball.stallTime >= c.stallDelay || (ball.x > c.failAfterX && speed <= 0.12)) {
-        this.emit('stall', { speed, x: ball.x, slope: frame.slope });
-      }
+      // Forward motion is an arcade invariant. A poor line can cost almost all
+      // stored momentum, but it cannot roll the player backward or strand them
+      // in a bowl. The low crawl is deliberately much slower than a clean run.
+      ball.stallTime = 0;
     }
 
     stepAir(dt, held) {
@@ -471,6 +596,15 @@
         ball.vx -= ball.vx / speed * dragAcceleration * dt;
         ball.vy -= ball.vy / speed * dragAcceleration * dt;
       }
+
+      // A subtle forward wind only engages when horizontal momentum is nearly
+      // gone. Holding strengthens it, keeping the one-touch control useful
+      // without adding speed to already-fast flights.
+      const forwardTarget = held ? c.heldAirForwardSpeed : c.airForwardSpeed;
+      if (ball.vx < forwardTarget) {
+        ball.vx += (forwardTarget - ball.vx) * c.airForwardResponse * dt;
+      }
+      ball.vx = Math.max(c.minimumAirForwardSpeed, ball.vx);
 
       ball.vy += totalGravity * dt;
       const speedAfter = Math.hypot(ball.vx, ball.vy);
@@ -492,16 +626,25 @@
       const newGap = this.surfaceGap(ball.x, ball.y);
       if ((oldGap <= 0 && newGap >= 0) || newGap > ball.radius * 0.08) {
         this.resolveSweptCollision(oldX, oldY, ball.x, ball.y);
+        return;
+      }
+
+      if (this.flight.pendingLaunch && this.flight.airtime >= c.launchConfirmTime) {
+        const launch = this.flight.pendingLaunch;
+        this.flight.pendingLaunch = null;
+        this.flight.confirmed = true;
+        this.emit('launch', launch);
       }
     }
 
     settle(frame, speed) {
       const ball = this.ball;
+      const forwardSpeed = clamp(speed, this.config.minimumForwardSpeed, this.config.maxSpeedSafety);
       ball.grounded = true;
-      ball.groundSpeed = speed;
-      ball.vx = frame.tx * speed;
-      ball.vy = frame.ty * speed;
-      ball.omega = speed / ball.radius;
+      ball.groundSpeed = forwardSpeed;
+      ball.vx = frame.tx * forwardSpeed;
+      ball.vy = frame.ty * forwardSpeed;
+      ball.omega = forwardSpeed / ball.radius;
       ball.stallTime = 0;
       ball.groundTime = 0;
     }
@@ -527,14 +670,29 @@
       const normalImpact = Math.max(0, -outwardSpeed);
       const landingAngle = Math.atan2(normalImpact, Math.max(1, tangentSpeed));
       const forwardSlideSpeed = Math.max(0, ball.vx * frame.tx);
-      const recoverableForwardImpact = tangentSpeed <= 0 && forwardSlideSpeed > 95 && normalImpact < c.crashNormalSpeed * 0.94;
-      const wouldCrash = (tangentSpeed <= 0 && !recoverableForwardImpact)
-        || normalImpact > c.crashNormalSpeed
-        || landingAngle > c.crashAngle;
+
+      // Very shallow detach/recontact pairs are one continuous ground carve,
+      // not a real jump. Suppressing these sub-frame skims removes camera,
+      // scoring, audio, and route-prediction flicker at fast rounded crests.
+      if (this.flight.pendingLaunch
+        && this.flight.airtime < c.launchConfirmTime
+        && normalImpact <= c.perfectNormalSpeed) {
+        this.flight.pendingLaunch = null;
+        this.settle(frame, Math.max(tangentSpeed, forwardSlideSpeed, c.minimumForwardSpeed));
+        return;
+      }
+
+      const recoverableForwardImpact = tangentSpeed <= 0 && normalImpact < c.crashNormalSpeed;
+      const wouldCrash = normalImpact > c.crashNormalSpeed
+        || (landingAngle > c.crashAngle && normalImpact > c.hardNormalSpeed);
 
       const safetyAvailable = !ball.safetyUsed && ball.x <= c.safetyNetEndX;
       if (wouldCrash && safetyAvailable) {
-        const recoverySpeed = clamp(Math.max(205, forwardSlideSpeed * 0.68), 205, 390);
+        const recoverySpeed = clamp(
+          Math.max(c.hardLandingRecoverySpeed, forwardSlideSpeed * 0.68),
+          c.hardLandingRecoverySpeed,
+          420
+        );
         ball.safetyUsed = true;
         this.settle(frame, recoverySpeed);
         this.emit('landing', {
@@ -554,7 +712,7 @@
 
       if (wouldCrash) {
         this.emit('crash', {
-          reason: tangentSpeed <= 0 && !recoverableForwardImpact ? 'backward' : 'impact',
+          reason: 'impact',
           x: ball.x,
           tangentSpeed,
           normalImpact,
@@ -583,8 +741,10 @@
       }
 
       const settledSpeed = clamp(
-        recoverableForwardImpact ? Math.max(155, forwardSlideSpeed * 0.6) : tangentSpeed * retention,
-        0,
+        recoverableForwardImpact
+          ? Math.max(c.hardLandingRecoverySpeed, forwardSlideSpeed * 0.58)
+          : tangentSpeed * retention,
+        c.minimumForwardSpeed,
         c.maxSpeedSafety
       );
       this.settle(frame, settledSpeed);

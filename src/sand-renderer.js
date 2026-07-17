@@ -250,11 +250,15 @@
       c.textBaseline = 'middle';
       const width = c.measureText(label).width + 22;
       const x = this.W - width - 12;
-      roundedRect(c, x, y - 13, width, 24, 12);
+      // The fixed HUD owns the top corners. When the world-space score line
+      // crosses that band, keep its badge just below the HUD instead of
+      // painting it underneath the run-coins panel on landscape phones.
+      const labelY = y >= 8 && y < 76 ? Math.min(this.H - 14, 82) : y;
+      roundedRect(c, x, labelY - 13, width, 24, 12);
       c.fillStyle = active ? '#ffe36b' : 'rgba(5,40,51,.72)';
       c.fill();
       c.fillStyle = active ? '#17313a' : '#fff';
-      c.fillText(label, x + 11, y - 1);
+      c.fillText(label, x + 11, labelY - 1);
       c.restore();
     }
 

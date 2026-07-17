@@ -29,10 +29,82 @@
     const descending = frame.slope > 0.025;
     const valleyAhead = near.centerY > frame.centerY + 18 || far.centerY > frame.centerY + 42;
     const climbing = frame.slope < -0.045;
-    const crestSoon = climbing && near.slope > frame.slope + 0.055;
+    const crestSoon = climbing && near.slope > -0.12 && far.slope > 0.015;
     if (descending || valleyAhead) return true;
-    if (climbing || crestSoon) return false;
-    return far.centerY > frame.centerY + 8;
+    if (crestSoon) return false;
+    if (climbing || speed < 360) return true;
+    return far.centerY > frame.centerY + 8 || frame.slope > -0.025;
+  }
+
+  function confirmLaunchClearance(terrain, config, launch, radius, dt, held) {
+    let x = launch.x;
+    let y = launch.y;
+    let vx = launch.vx;
+    let vy = launch.vy;
+    let previousGap = y - terrain.frame(x, radius).centerY;
+    const steps = Math.ceil((config.launchConfirmTime ?? 0.055) / dt);
+
+    for (let step = 0; step < steps; step += 1) {
+      // The decision that caused detachment remains active for the current
+      // fixed step; the route pilot releases on the following step.
+      const stepHeld = held && step === 0;
+      const oldX = x;
+      const oldY = y;
+      const speed = Math.hypot(vx, vy);
+      if (speed > 0) {
+        const dragAcceleration = (config.airDrag ?? 0.000009) * speed * speed;
+        vx -= vx / speed * dragAcceleration * dt;
+        vy -= vy / speed * dragAcceleration * dt;
+      }
+      const forwardTarget = stepHeld
+        ? (config.heldAirForwardSpeed ?? 250)
+        : (config.airForwardSpeed ?? 165);
+      if (vx < forwardTarget) {
+        vx += (forwardTarget - vx) * (config.airForwardResponse ?? 2.2) * dt;
+      }
+      vx = Math.max(config.minimumAirForwardSpeed ?? 110, vx);
+      vy += ((config.gravity ?? 455) + (stepHeld ? (config.airDiveExtraGravity ?? 0) : 0)) * dt;
+      const limitedSpeed = Math.hypot(vx, vy);
+      if (limitedSpeed > (config.maxSpeedSafety ?? 2700)) {
+        const scale = (config.maxSpeedSafety ?? 2700) / limitedSpeed;
+        vx *= scale;
+        vy *= scale;
+      }
+      x += vx * dt;
+      y += vy * dt;
+      const gap = y - terrain.frame(x, radius).centerY;
+      if ((previousGap <= 0 && gap >= 0) || gap > radius * 0.08) {
+        let low = 0;
+        let high = 1;
+        for (let iteration = 0; iteration < (config.collisionIterations ?? 15); iteration += 1) {
+          const middle = (low + high) * 0.5;
+          const probeX = lerp(oldX, x, middle);
+          const probeY = lerp(oldY, y, middle);
+          if (probeY - terrain.frame(probeX, radius).centerY >= 0) high = middle;
+          else low = middle;
+        }
+        const hitX = lerp(oldX, x, high);
+        const frame = terrain.frame(hitX, radius);
+        const tangent = dot(vx, vy, frame.tx, frame.ty);
+        const outward = dot(vx, vy, frame.nx, frame.ny);
+        const normalImpact = Math.max(0, -outward);
+        if (normalImpact <= (config.perfectNormalSpeed ?? 235)) {
+          return {
+            confirmed: false,
+            x: hitX,
+            frame,
+            speed: Math.max(
+              tangent,
+              vx * frame.tx,
+              config.minimumForwardSpeed ?? 150
+            )
+          };
+        }
+      }
+      previousGap = gap;
+    }
+
+    return { confirmed: true };
   }
 
   function simulateGroundToLaunch(terrain, config, sourceBall, options) {
@@ -77,24 +149,44 @@
         && speed > 105;
 
       if (canDetach) {
-        return {
-          launch: {
-            x: ball.x,
-            y: frame.centerY - 0.02,
-            vx: frame.tx * speed,
-            vy: frame.ty * speed,
-            speed,
-            slope: frame.slope,
-            curvature: frame.curvature
-          },
-          groundTrace
+        const launch = {
+          x: ball.x,
+          y: frame.centerY - 0.02,
+          vx: frame.tx * speed,
+          vy: frame.ty * speed,
+          speed,
+          slope: frame.slope,
+          curvature: frame.curvature
         };
+        const clearance = confirmLaunchClearance(terrain, config, launch, ball.radius, dt, held);
+        if (clearance.confirmed) return { launch, groundTrace };
+
+        ball.x = clearance.x;
+        ball.y = clearance.frame.centerY;
+        ball.vx = clearance.frame.tx * clearance.speed;
+        ball.vy = clearance.frame.ty * clearance.speed;
+        ball.groundSpeed = clearance.speed;
+        ball.groundTime = 0;
+        continue;
       }
 
       const tangentGravity = totalGravity * frame.ty;
-      const resistance = (config.rollingResistance ?? 1.6) + speed * (config.rollingSpeedDrag ?? 0.0009);
-      const acceleration = tangentGravity / (config.rollingInertiaFactor ?? 1.34) - resistance;
-      speed = clamp(speed + acceleration * dt, 0, config.maxSpeedSafety ?? 2350);
+      const resistance = (config.rollingResistance ?? 1.1) + speed * (config.rollingSpeedDrag ?? 0.00055);
+      const coastDrive = Math.max(0, (config.coastTargetSpeed ?? 240) - speed)
+        * (config.coastResponse ?? 2.8);
+      const heldDrive = held
+        ? Math.max(0, (config.heldTargetSpeed ?? 560) - speed) * (config.heldResponse ?? 3.8)
+          + (config.heldUphillAssist ?? 850) * clamp(-frame.slope / 1.05, 0, 1)
+        : 0;
+      const acceleration = tangentGravity / (config.rollingInertiaFactor ?? 1.24)
+        + coastDrive
+        + heldDrive
+        - resistance;
+      speed = clamp(
+        speed + acceleration * dt,
+        config.minimumForwardSpeed ?? 150,
+        config.maxSpeedSafety ?? 2700
+      );
       ball.x += frame.tx * speed * dt;
       frame = terrain.frame(ball.x, ball.radius);
       ball.y = frame.centerY;
@@ -131,15 +223,23 @@
       const speed = Math.hypot(vx, vy);
 
       if (speed > 0) {
-        const dragAcceleration = (config.airDrag ?? 0.000012) * speed * speed;
+        const dragAcceleration = (config.airDrag ?? 0.000009) * speed * speed;
         vx -= vx / speed * dragAcceleration * dt;
         vy -= vy / speed * dragAcceleration * dt;
       }
 
+      const forwardTarget = held
+        ? (config.heldAirForwardSpeed ?? 250)
+        : (config.airForwardSpeed ?? 165);
+      if (vx < forwardTarget) {
+        vx += (forwardTarget - vx) * (config.airForwardResponse ?? 2.2) * dt;
+      }
+      vx = Math.max(config.minimumAirForwardSpeed ?? 110, vx);
+
       vy += gravity * dt;
       const limitedSpeed = Math.hypot(vx, vy);
-      if (limitedSpeed > (config.maxSpeedSafety ?? 2350)) {
-        const scale = (config.maxSpeedSafety ?? 2350) / limitedSpeed;
+      if (limitedSpeed > (config.maxSpeedSafety ?? 2700)) {
+        const scale = (config.maxSpeedSafety ?? 2700) / limitedSpeed;
         vx *= scale;
         vy *= scale;
       }
@@ -185,18 +285,60 @@
     return null;
   }
 
-  function chooseFlight(terrain, config, launch, radius, options) {
-    const candidates = [Infinity, 0, 0.2, 0.42, 0.68]
+  function chooseFlight(terrain, config, launch, radius, options, requireRewardArc = true) {
+    let candidates = [Infinity, 0, 0.2, 0.42, 0.68]
       .map(delay => simulateFlightCandidate(terrain, config, launch, radius, options, delay))
       .filter(Boolean)
-      .filter(route => route.airtime >= options.minAirtime
+      .filter(route => route.landing.tangent > 0
+        && route.landing.normalImpact < (config.crashNormalSpeed ?? 1880));
+
+    if (requireRewardArc) {
+      candidates = candidates.filter(route => route.airtime >= options.minAirtime
         && route.distance >= options.minDistance
-        && route.maxAltitude >= options.minAltitude
-        && route.landing.tangent > 0);
+        && route.maxAltitude >= options.minAltitude);
+    }
 
     if (!candidates.length) return null;
     candidates.sort((a, b) => b.qualityScore - a.qualityScore);
     return candidates[0];
+  }
+
+  function landingState(terrain, config, route, radius) {
+    const frame = terrain.frame(route.landing.x + 5, radius);
+    const tangent = Math.max(0, dot(route.landing.vx, route.landing.vy, frame.tx, frame.ty));
+    const normalImpact = route.landing.normalImpact;
+    const landingAngle = route.landing.landingAngle;
+    let retention;
+    if (landingAngle <= (config.perfectAngle ?? 0.2)
+      && normalImpact <= (config.perfectNormalSpeed ?? 235)) {
+      retention = config.perfectRetention ?? 1.012;
+    } else if (landingAngle <= (config.goodAngle ?? 0.6)
+      && normalImpact <= (config.goodNormalSpeed ?? 650)) {
+      retention = config.goodRetention ?? 0.99;
+    } else {
+      const impactLoss = clamp(normalImpact / (config.crashNormalSpeed ?? 1880), 0, 1) * 0.12;
+      const angleLoss = clamp(landingAngle / (config.crashAngle ?? 1.42), 0, 1) * 0.08;
+      retention = clamp(
+        (config.roughRetentionMax ?? 0.93) - impactLoss - angleLoss,
+        config.roughRetentionMin ?? 0.76,
+        config.roughRetentionMax ?? 0.93
+      );
+    }
+    const speed = clamp(
+      tangent * retention,
+      config.minimumForwardSpeed ?? 150,
+      config.maxSpeedSafety ?? 2700
+    );
+    return {
+      x: route.landing.x + 5,
+      y: frame.centerY,
+      vx: frame.tx * speed,
+      vy: frame.ty * speed,
+      radius,
+      grounded: true,
+      groundSpeed: speed,
+      groundTime: 1
+    };
   }
 
   function predictReleaseRoute(terrain, config, ball, customOptions = {}) {
@@ -211,12 +353,30 @@
       airSampleEvery: customOptions.airSampleEvery ?? 6,
       minAirtime: customOptions.minAirtime ?? 0.3,
       minDistance: customOptions.minDistance ?? 150,
-      minAltitude: customOptions.minAltitude ?? 16
+      minAltitude: customOptions.minAltitude ?? 16,
+      maxSkippedHops: customOptions.maxSkippedHops ?? 3
     };
 
-    const groundPrediction = simulateGroundToLaunch(terrain, config, ball, options);
-    if (!groundPrediction.launch) return null;
-    const route = chooseFlight(terrain, config, groundPrediction.launch, ball.radius, options);
+    let planningBall = cloneBall(ball);
+    let route = null;
+    let groundPrediction = null;
+    for (let hop = 0; hop <= options.maxSkippedHops; hop += 1) {
+      groundPrediction = simulateGroundToLaunch(terrain, config, planningBall, options);
+      if (!groundPrediction.launch) return null;
+      route = chooseFlight(terrain, config, groundPrediction.launch, planningBall.radius, options, true);
+      if (route) break;
+
+      const connector = chooseFlight(
+        terrain,
+        config,
+        groundPrediction.launch,
+        planningBall.radius,
+        options,
+        false
+      );
+      if (!connector) return null;
+      planningBall = landingState(terrain, config, connector, planningBall.radius);
+    }
     if (!route) return null;
 
     route.groundTrace = groundPrediction.groundTrace;
@@ -299,6 +459,7 @@
     predictReleaseRoute,
     buildCoinLine,
     pointAtFraction,
+    groundControl,
     simulateGroundToLaunch,
     simulateFlightCandidate
   };

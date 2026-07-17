@@ -34,14 +34,15 @@
       const aheadNear = this.terrain.frame(ball.x + clamp(speed * 0.2, 70, 180), ball.radius);
       const aheadFar = this.terrain.frame(ball.x + clamp(speed * 0.46, 170, 430), ball.radius);
       const descending = frame.slope > 0.035;
-      const valleyAhead = aheadNear.slope > frame.slope || aheadFar.centerY > frame.centerY + 55;
       const climbing = frame.slope < -0.055;
-      const crestSoon = climbing && aheadNear.slope > frame.slope + 0.07;
+      const valleyAhead = !climbing
+        && (aheadNear.centerY > frame.centerY + 18 || aheadFar.centerY > frame.centerY + 55);
+      const crestSoon = climbing && aheadNear.slope > -0.12 && aheadFar.slope > 0.015;
 
       if (descending || valleyAhead) return true;
-      if (crestSoon || climbing) return false;
-      if (speed < 250) return aheadFar.centerY > frame.centerY;
-      return frame.slope > -0.015;
+      if (crestSoon) return false;
+      if (climbing || speed < 360) return true;
+      return frame.slope > -0.025;
     }
 
     simulateAir(held) {
@@ -63,6 +64,11 @@
           vx -= vx / speed * drag * dt;
           vy -= vy / speed * drag * dt;
         }
+        const forwardTarget = held ? config.heldAirForwardSpeed : config.airForwardSpeed;
+        if (vx < forwardTarget) {
+          vx += (forwardTarget - vx) * config.airForwardResponse * dt;
+        }
+        vx = Math.max(config.minimumAirForwardSpeed, vx);
         vy += gravity * dt;
         x += vx * dt;
         y += vy * dt;

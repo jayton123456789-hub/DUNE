@@ -23,13 +23,38 @@ const route = routes.predictReleaseRoute(terrain, config, world.ball, {
 });
 
 assert.ok(route, 'the real opening terrain should produce a playable predicted route');
-assert.ok(route.launch.x > 2_000 && route.launch.x < 2_600, `opening launch moved out of its intended window: ${route.launch.x}`);
-assert.ok(route.distance > 800, `opening flight is too short for a readable coin line: ${route.distance}`);
+assert.ok(route.launch.x > 1_000 && route.launch.x < 1_400, `opening launch missed the first crest: ${route.launch.x}`);
+assert.ok(route.distance > 1_000, `opening flight is too short for a readable coin line: ${route.distance}`);
 assert.ok(route.airtime > 1.2, `opening flight is too brief: ${route.airtime}`);
-assert.ok(route.maxAltitude > 180, `opening flight is too flat: ${route.maxAltitude}`);
+assert.ok(route.maxAltitude > 300, `opening flight is too flat: ${route.maxAltitude}`);
 assert.ok(route.landing.tangent > 0, 'predicted opening landing reverses the ball');
 assert.ok(route.landing.normalImpact < config.crashNormalSpeed, `opening route predicts a fatal impact: ${route.landing.normalImpact}`);
 assert.ok(route.landing.landingAngle < config.crashAngle, `opening route predicts a fatal angle: ${route.landing.landingAngle}`);
+
+// Replay the planner's exact decisions through the authoritative world. This
+// catches silent drift between route coins and the real ground/air integrator.
+const replay = new PhysicsWorld({ seed: 0xdecafbad });
+let replayLaunch = null;
+let replayLanding = null;
+let replayApexTime = null;
+for (let step = 0; step < 8 * 120 && !replayLanding; step += 1) {
+  let held;
+  if (replay.ball.grounded) {
+    replayApexTime = null;
+    held = routes.groundControl(replay.terrain, replay.ball, Math.hypot(replay.ball.vx, replay.ball.vy));
+  } else {
+    if (replayApexTime === null && replay.ball.vy >= 0) replayApexTime = replay.elapsed;
+    held = Number.isFinite(route.control.diveDelay)
+      && replayApexTime !== null
+      && replay.elapsed - replayApexTime >= route.control.diveDelay;
+  }
+  const events = replay.step(1 / 120, held);
+  replayLaunch ||= events.find(event => event.type === 'launch') || null;
+  replayLanding ||= events.find(event => event.type === 'landing' || event.type === 'crash') || null;
+}
+assert.equal(replayLanding?.type, 'landing', 'predicted opening route crashes in the authoritative simulation');
+assert.ok(Math.abs(replayLaunch.x - route.launch.x) < 3, `predicted launch drifted by ${replayLaunch.x - route.launch.x}`);
+assert.ok(Math.abs(replayLanding.x - route.landing.x) < 10, `predicted landing drifted by ${replayLanding.x - route.landing.x}`);
 
 const coins = routes.buildCoinLine(route, terrain, radius);
 assert.ok(coins.length >= 5 && coins.length <= 9, `opening route coin count is invalid: ${coins.length}`);

@@ -217,16 +217,16 @@
       return;
     }
     game.tutorialStage = 0;
-    ui.showCoach('HOLD TO DIVE', 'Press the world to build speed', false);
+    ui.showCoach('HOLD FOR SPEED', 'Press the world to drive forward', false);
   }
 
   function updateTutorialInput(held) {
     if (game.tutorialStage < 0) return;
     if (game.tutorialStage === 0 && held) {
       game.tutorialStage = 1;
-      ui.showCoach('POWER THROUGH THE BOWL', 'Keep holding on the downhill', true);
+      ui.showCoach('POWER THROUGH THE BOWL', 'Keep holding through the climb', true);
     } else if (game.tutorialStage === 2 && !held) {
-      ui.showCoach('LET THE CURVE LIFT YOU', 'Stay released through the uphill', false);
+      ui.showCoach('LET THE CREST LIFT YOU', 'Stay released across the tip', false);
     } else if (game.tutorialStage === 3 && held && !world.ball.grounded) {
       game.tutorialStage = 4;
       ui.showCoach('AIM FOR THE SLOPE', 'Release if your descent gets too steep', true);
@@ -236,9 +236,9 @@
   function updateTutorialWorld() {
     if (game.tutorialStage < 0) return;
     const frame = terrain.frame(world.ball.x, world.ball.radius);
-    if (game.tutorialStage === 1 && world.ball.x > 780 && frame.slope < -0.09) {
+    if (game.tutorialStage === 1 && world.ball.x > 900 && frame.slope < -0.2) {
       game.tutorialStage = 2;
-      ui.showCoach('RELEASE TO FLY', 'Let go as the curve lifts you', game.held);
+      ui.showCoach('RELEASE TO FLY', 'Let go just before the crest', game.held);
     } else if (game.tutorialStage === 3 && !world.ball.grounded && world.ball.vy > 40) {
       ui.showCoach('HOLD TO DIVE', 'Steepen your descent toward the downhill', game.held);
     }
@@ -312,7 +312,7 @@
         if (demo) {
           sand.landing(event);
         } else handleLanding(event);
-      } else if (event.type === 'crash' || event.type === 'stall') {
+      } else if (event.type === 'crash') {
         if (demo) resetDemo();
         else finishRun(event);
       }
@@ -327,18 +327,16 @@
     game.pointerId = null;
     ui.hideCoach(false);
     processScoreEvents(score.losePending(event.type));
-    const impactY = event.type === 'stall' ? terrain.frame(world.ball.x, world.ball.radius).centerY : world.ball.y;
-    sand.crash(world.ball.x, impactY);
-    renderer.kick(event.type === 'stall' ? 4.5 : 10);
+    sand.crash(world.ball.x, world.ball.y);
+    renderer.kick(10);
     ui.audio.crash();
     ui.haptic([34, 38, 48]);
     ui.gameplayVisible(true, 'ending');
 
-    const copy = event.type === 'stall'
-      ? { title: 'Momentum faded', reason: 'Dive deeper through the bowls, then release as the curve lifts you.' }
-      : event.reason === 'backward'
-        ? { title: 'Curve missed', reason: 'Meet the dune while moving forward and match its downhill angle.' }
-        : { title: 'Hard landing', reason: 'Hold after the apex to steepen your descent into the next slope.' };
+    const copy = {
+      title: 'Hard landing',
+      reason: 'Hold after the apex to steepen your descent into the next slope.'
+    };
 
     clearTimeout(game.endTimer);
     game.endTimer = window.setTimeout(() => {
@@ -490,7 +488,7 @@
       ui.haptic([7, 18, 7]);
     },
     onComplete: () => {
-      try { sessionStorage.setItem('driftline-intro-seen-v24', '1'); } catch (_) {}
+      try { sessionStorage.setItem('driftline-intro-seen-v26', '1'); } catch (_) {}
       ui.finishSplash();
       showMenu('main');
     }
@@ -641,7 +639,7 @@
   window.visualViewport?.addEventListener('resize', handleResize, { passive: true });
 
   root.__DRIFTLINE__ = {
-    version: 24,
+    version: 26,
     get mode() { return game.mode; },
     snapshot() {
       return {
@@ -665,7 +663,7 @@
   requestAnimationFrame(frame);
 
   let introSeen = false;
-  try { introSeen = sessionStorage.getItem('driftline-intro-seen-v24') === '1'; } catch (_) {}
+  try { introSeen = sessionStorage.getItem('driftline-intro-seen-v26') === '1'; } catch (_) {}
   if (introSeen || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     showMenu('main');
   } else {

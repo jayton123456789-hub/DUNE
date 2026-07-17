@@ -23,7 +23,15 @@ const terrain = {
 };
 
 const world = {
-  config: { gravity: 455, airDiveExtraGravity: 1350, airDrag: 0.000012 },
+  config: {
+    gravity: 455,
+    airDiveExtraGravity: 1350,
+    airDrag: 0.000009,
+    minimumAirForwardSpeed: 110,
+    airForwardSpeed: 165,
+    heldAirForwardSpeed: 250,
+    airForwardResponse: 2.2
+  },
   flight: { airtime: 0.2 },
   ball: { x: 220, y: 500, vx: 420, vy: 190, radius: 24, grounded: true, groundSpeed: 460 }
 };
@@ -34,7 +42,9 @@ assert(pilot.groundDecision() === true, 'pilot should hold on a downhill');
 world.ball.x = 650;
 world.ball.vx = 520;
 world.ball.vy = -210;
-assert(pilot.groundDecision() === false, 'pilot should release on an uphill');
+assert(pilot.groundDecision() === true, 'pilot should keep driving through an uphill');
+world.ball.x = 820;
+assert(pilot.groundDecision() === false, 'pilot should release when the crest is directly ahead');
 world.ball.grounded = false;
 world.ball.x = 750;
 world.ball.y = 250;
@@ -46,6 +56,7 @@ assert(typeof decision === 'boolean', 'air decision must be boolean');
 console.log(JSON.stringify({
   status: 'pass',
   downhillHold: true,
-  uphillRelease: true,
+  uphillDrive: true,
+  crestRelease: true,
   airDecision: decision
 }, null, 2));

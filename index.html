@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=24">
+  <link rel="stylesheet" href="styles.css?v=26">
   <title>Driftline</title>
 </head>
 <body>
@@ -67,7 +67,7 @@
 
     <aside id="coachHint" class="coach-hint" aria-live="polite" aria-hidden="true">
       <span class="coach-touch" aria-hidden="true"><i></i></span>
-      <div><strong id="coachTitle">HOLD TO DIVE</strong><small id="coachCopy">Press anywhere on the world</small></div>
+      <div><strong id="coachTitle">HOLD FOR SPEED</strong><small id="coachCopy">Press anywhere on the world</small></div>
     </aside>
     <div id="bestMarkerLabel" class="best-marker-label" aria-hidden="true">PERSONAL BEST</div>
 
@@ -86,7 +86,7 @@
           <div class="menu-hero">
             <p>ONE TOUCH. PURE MOMENTUM.</p>
             <h1>DRIFT<span>LINE</span></h1>
-            <div class="control-legend"><span><i>HOLD</i> dive &amp; accelerate</span><span><i>RELEASE</i> float &amp; launch</span></div>
+            <div class="control-legend"><span><i>HOLD</i> drive &amp; dive</span><span><i>RELEASE</i> launch &amp; glide</span></div>
           </div>
 
           <div class="play-dock">
@@ -100,7 +100,7 @@
               <b id="currentGoalReward"><img src="assets/coin.svg" alt="">30</b>
               <i role="progressbar" aria-label="Objective progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="goalProgressBar"></span></i>
             </div>
-            <button id="playButton" class="primary-button" type="button"><span><svg><use href="#i-play"></use></svg>PLAY</span><small>Hold downhill &middot; Release uphill</small></button>
+            <button id="playButton" class="primary-button" type="button"><span><svg><use href="#i-play"></use></svg>PLAY</span><small>Hold for speed &middot; Release at the crest</small></button>
           </div>
 
           <nav class="bottom-nav" aria-label="Main navigation">
@@ -173,8 +173,8 @@
         <div class="menu-panel">
           <header class="panel-header"><button class="back-button" type="button" data-open-view="records" aria-label="Back to records"><svg><use href="#i-back"></use></svg></button><div><p>QUICK GUIDE</p><h2>HOW TO PLAY</h2></div><div class="header-spacer"></div></header>
           <div class="guide-grid">
-            <article><span>01</span><div><b>BUILD MOMENTUM</b><p>Hold while rolling downhill. Gravity and dive force turn depth into speed.</p></div></article>
-            <article><span>02</span><div><b>RELEASE TO FLY</b><p>Let go as the ball climbs. A clean crest turns momentum into airtime.</p></div></article>
+            <article><span>01</span><div><b>BUILD MOMENTUM</b><p>Hold on the ground to drive forward. Bowls and downhills multiply that speed.</p></div></article>
+            <article><span>02</span><div><b>RELEASE TO FLY</b><p>Power up the climb, then let go just before the crest to turn speed into airtime.</p></div></article>
             <article><span>03</span><div><b>ALIGN THE LANDING</b><p>Hold after the apex to dive toward the dune. Match its direction to keep speed.</p></div></article>
             <article><span>04</span><div><b>BANK THE RISK</b><p>Flights above the score line build risk. Smooth landings bank it and grow your chain.</p></div></article>
           </div>
@@ -218,18 +218,18 @@
     <div id="toastMessage" class="system-toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script defer src="src/physics-core.js?v=24"></script>
-  <script defer src="src/camera-system.js?v=24"></script>
-  <script defer src="src/coin-routes.js?v=24"></script>
-  <script defer src="src/coin-field.js?v=24"></script>
-  <script defer src="src/score-system.js?v=24"></script>
-  <script defer src="src/autopilot.js?v=24"></script>
-  <script defer src="src/sand-effects.js?v=24"></script>
-  <script defer src="src/art.js?v=24"></script>
-  <script defer src="src/game-ui.js?v=24"></script>
-  <script defer src="src/sand-renderer.js?v=24"></script>
-  <script defer src="src/intro-cinematic.js?v=24"></script>
-  <script defer src="src/main.js?v=24"></script>
-  <script defer src="src/sw-register.js?v=24"></script>
+  <script defer src="src/physics-core.js?v=26"></script>
+  <script defer src="src/camera-system.js?v=26"></script>
+  <script defer src="src/coin-routes.js?v=26"></script>
+  <script defer src="src/coin-field.js?v=26"></script>
+  <script defer src="src/score-system.js?v=26"></script>
+  <script defer src="src/autopilot.js?v=26"></script>
+  <script defer src="src/sand-effects.js?v=26"></script>
+  <script defer src="src/art.js?v=26"></script>
+  <script defer src="src/game-ui.js?v=26"></script>
+  <script defer src="src/sand-renderer.js?v=26"></script>
+  <script defer src="src/intro-cinematic.js?v=26"></script>
+  <script defer src="src/main.js?v=26"></script>
+  <script defer src="src/sw-register.js?v=26"></script>
 </body>
 </html>
